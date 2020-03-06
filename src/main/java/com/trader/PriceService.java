@@ -22,9 +22,6 @@ public class PriceService {
         while(true) {
             updatePrices();
             notifyObservers();
-
-            System.out.println(bidPrice + " " + askPrice);
-
             TimeUnit.SECONDS.sleep(1);
         }
     }
@@ -47,8 +44,8 @@ public class PriceService {
     }
 
     private void updateBidAndAsk() {
-        askPrice = round(midPrice + spread / 2, 4);
-        bidPrice = round(midPrice - spread / 2, 4);
+        askPrice = round(midPrice + spread / 2);
+        bidPrice = round(midPrice - spread / 2);
     }
 
     private void notifyObservers() {
@@ -57,9 +54,9 @@ public class PriceService {
         }
     }
 
-    private double round(double value, int precision) {
+    private double round(double value) {
         BigDecimal bd = new BigDecimal(Double.toString(value));
-        bd = bd.setScale(precision, RoundingMode.HALF_UP);
+        bd = bd.setScale(2, RoundingMode.HALF_UP);
         return bd.doubleValue();
     }
 }
