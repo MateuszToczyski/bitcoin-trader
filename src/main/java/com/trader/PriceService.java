@@ -1,11 +1,8 @@
 package com.trader;
 
-import javafx.beans.property.SimpleStringProperty;
-import sun.java2d.pipe.SpanShapeRenderer;
-
 import java.math.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class PriceService {
 
@@ -20,25 +17,27 @@ public class PriceService {
         updateBidAndAsk();
     }
 
-    public void start() throws InterruptedException {
+    public void start() {
 
-        while(true) {
-            updatePrices();
-            notifyObservers();
-            TimeUnit.SECONDS.sleep(1);
-        }
+        CompletableFuture.runAsync(() -> {
+
+            //noinspection InfiniteLoopStatement
+            while(true) {
+
+                updatePrices();
+                notifyObservers();
+
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public void addObserver(PriceObserver observer) {
         observers.add(observer);
-    }
-
-    public SimpleStringProperty bidPriceProperty() {
-        return new SimpleStringProperty(String.valueOf(bidPrice));
-    }
-
-    public SimpleStringProperty askPriceProperty() {
-        return new SimpleStringProperty(String.valueOf(askPrice));
     }
 
     private void updatePrices() { //randomly increases or decreases prices

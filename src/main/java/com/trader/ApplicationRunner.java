@@ -2,10 +2,12 @@ package com.trader;
 
 import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
@@ -24,14 +26,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
     public void start(Stage primaryStage) {
 
         priceService.addObserver(this);
-
-        new Thread(() -> {
-            try {
-                ApplicationRunner.priceService.start();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        priceService.start();
 
         primaryStage.setTitle("Bitcoin Trader");
         primaryStage.setWidth(1000);
@@ -48,6 +43,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         upperGridPane.setAlignment(Pos.TOP_CENTER);
         upperGridPane.setHgap(20);
         upperGridPane.setVgap(10);
+        upperGridPane.setPadding(new Insets(10, 0, 30, 0));
 
         Text textBid = new Text("Bid");
         textBid.textProperty().bind(bidPriceProperty);
@@ -71,6 +67,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         upperGridPane.add(textFieldNominal, 3, 2);
 
         TabPane tabPane = new TabPane();
+        tabPane.setMinHeight(250);
 
         Tab tabPositions = new Tab("Positions");
         tabPositions.closableProperty().setValue(false);
@@ -80,9 +77,21 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         tabPane.getTabs().addAll(tabPositions, tabOrders);
 
+        GridPane bottomGridPane = new GridPane();
+        bottomGridPane.setAlignment(Pos.TOP_LEFT);
+        bottomGridPane.setPadding(new Insets(10, 10, 10, 10));
+        bottomGridPane.setHgap(10);
+        bottomGridPane.setVgap(10);
+        bottomGridPane.setMinHeight(100);
+        bottomGridPane.setBorder(new Border(new BorderStroke(Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE,
+                CornerRadii.EMPTY, new BorderWidths(1), Insets.EMPTY)));
+
+        Text textBalance = new Text("Balance:");
+        bottomGridPane.add(textBalance, 0, 0);
+
         VBox vBox = new VBox();
-        vBox.setSpacing(30);
-        vBox.getChildren().addAll(upperGridPane, tabPane);
+        vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
 
         return new Scene(vBox);
     }
