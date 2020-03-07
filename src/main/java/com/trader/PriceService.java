@@ -1,5 +1,8 @@
 package com.trader;
 
+import javafx.beans.property.SimpleStringProperty;
+import sun.java2d.pipe.SpanShapeRenderer;
+
 import java.math.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -30,9 +33,17 @@ public class PriceService {
         observers.add(observer);
     }
 
+    public SimpleStringProperty bidPriceProperty() {
+        return new SimpleStringProperty(String.valueOf(bidPrice));
+    }
+
+    public SimpleStringProperty askPriceProperty() {
+        return new SimpleStringProperty(String.valueOf(askPrice));
+    }
+
     private void updatePrices() { //randomly increases or decreases prices
 
-        int randomNumber = new Random().nextInt(1);
+        int randomNumber = new Random().nextInt(2);
 
         if(randomNumber == 0) {
             midPrice *= 0.999;
