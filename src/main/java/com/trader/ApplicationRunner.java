@@ -32,7 +32,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         primaryStage.setTitle("Bitcoin Trader");
         primaryStage.setWidth(900);
-        //primaryStage.setHeight(500);
         primaryStage.setScene(generateScene());
 
         primaryStage.show();
@@ -40,6 +39,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     @Override
     public void stop() {
+        priceService.stop();
         account.storeData();
     }
 
@@ -96,8 +96,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Text textBalanceLabel = new Text("Balance:");
         bottomGridPane.add(textBalanceLabel, 0, 0);
 
-        //Text textBalanceAmount = new Text(String.valueOf(account.getBalance()));
-        //bottomGridPane.add(textBalanceAmount, 1, 0);
+        Text textBalanceAmount = new Text(String.valueOf(account.getBalance()));
+        bottomGridPane.add(textBalanceAmount, 1, 0);
 
         VBox vBox = new VBox();
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);

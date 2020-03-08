@@ -6,16 +6,17 @@ import java.util.concurrent.*;
 
 public class PriceService {
 
-    private double midPrice;
     private double askPrice;
     private double bidPrice;
     private double spread;
     private boolean started = false;
+    private PriceFeed priceFeed;
     private List<PriceObserver> observers = new LinkedList<>();
 
-    public PriceService(double spread) {
+    public PriceService(double spread, PriceFeed priceFeed) {
         this.spread = spread;
-        updateBidAndAsk();
+        this.priceFeed = priceFeed;
+        updatePrices();
     }
 
     public void start() {
@@ -25,15 +26,9 @@ public class PriceService {
             started = true;
 
             while(started) {
-
                 updatePrices();
                 notifyObservers();
-
-                try {
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                pause();
             }
         });
     }
@@ -42,26 +37,20 @@ public class PriceService {
         started = false;
     }
 
+    private void pause() {
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void addObserver(PriceObserver observer) {
         observers.add(observer);
     }
 
     private void updatePrices() {
-
-        //implementation
-
-//        int randomNumber = new Random().nextInt(2);
-//
-//        if(randomNumber == 0) {
-//            midPrice *= 0.999;
-//        } else {
-//            midPrice *= 1.001;
-//        }
-//
-//        updateBidAndAsk();
-    }
-
-    private void updateBidAndAsk() {
+        double midPrice = priceFeed.nextPrice();
         askPrice = round(midPrice + spread / 2);
         bidPrice = round(midPrice - spread / 2);
     }
