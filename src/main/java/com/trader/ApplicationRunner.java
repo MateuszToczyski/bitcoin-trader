@@ -86,18 +86,24 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         GridPane bottomGridPane = new GridPane();
         bottomGridPane.setAlignment(Pos.TOP_LEFT);
-        bottomGridPane.setPadding(new Insets(15, 15, 15, 15));
-        bottomGridPane.setHgap(10);
-        bottomGridPane.setVgap(10);
+        bottomGridPane.setPadding(new Insets(15));
+        bottomGridPane.setHgap(20);
+        bottomGridPane.setVgap(5);
         bottomGridPane.setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, Color.LIGHTGRAY, Color.LIGHTGRAY,
                 Color.LIGHTGRAY, BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE,
                 BorderStrokeStyle.NONE, CornerRadii.EMPTY, new BorderWidths(1), Insets.EMPTY)));
 
-        Text textBalanceLabel = new Text("Balance:");
-        bottomGridPane.add(textBalanceLabel, 0, 0);
+        Text textBalanceLabel = new Text("Balance");
+        bottomGridPane.add(textBalanceLabel, 1, 0);
 
-        Text textBalanceAmount = new Text(String.valueOf(account.getBalance()));
-        bottomGridPane.add(textBalanceAmount, 1, 0);
+        Text textBalanceAmount = new Text();
+        textBalanceAmount.textProperty().bind(account.balanceProperty());
+        bottomGridPane.add(textBalanceAmount, 1, 1);
+
+        Button buttonDepositWithdrawal = new Button("Deposit / Withdrawal");
+        buttonDepositWithdrawal.setMinHeight(35);
+        buttonDepositWithdrawal.setOnAction(event -> depositWithdrawal());
+        bottomGridPane.add(buttonDepositWithdrawal, 0, 0, 1, 2);
 
         VBox vBox = new VBox();
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
@@ -109,5 +115,43 @@ public class ApplicationRunner extends Application implements PriceObserver {
     public void update(double bidPrice, double askPrice) {
         bidPriceProperty.setValue(String.valueOf(bidPrice));
         askPriceProperty.setValue(String.valueOf(askPrice));
+    }
+
+    private void depositWithdrawal() {
+
+        Stage stage = new Stage();
+        stage.setWidth(205);
+        stage.setHeight(140);
+
+        GridPane gridPane = new GridPane();
+        gridPane.setAlignment(Pos.TOP_CENTER);
+        gridPane.setPadding(new Insets(20));
+        gridPane.setVgap(20);
+        gridPane.setHgap(20);
+
+        TextField textFieldAmount = new TextField();
+        textFieldAmount.setMinWidth(150);
+        gridPane.add(textFieldAmount, 0, 0, 2, 1);
+
+        Button buttonDeposit = new Button("Deposit");
+        buttonDeposit.setMinWidth(70);
+        buttonDeposit.setOnAction(event -> {
+            account.amendBalance(Double.parseDouble(textFieldAmount.getText()));
+            stage.close();
+        });
+        gridPane.add(buttonDeposit, 0, 1);
+
+        Button buttonWithdraw = new Button("Withdraw");
+        buttonWithdraw.setMinWidth(70);
+        buttonWithdraw.setOnAction(event -> {
+            account.amendBalance( - Double.parseDouble(textFieldAmount.getText()));
+            stage.close();
+        });
+        gridPane.add(buttonWithdraw, 1, 1);
+
+        Scene scene = new Scene(gridPane);
+
+        stage.setScene(scene);
+        stage.show();
     }
 }
