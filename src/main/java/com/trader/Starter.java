@@ -7,6 +7,6 @@ public class Starter {
         ApplicationRunner applicationRunner = new ApplicationRunner();
         PriceService priceService = new PriceService(5);
 
-        applicationRunner.run(priceService);
+        applicationRunner.run(priceService, new Account(new DataStorage()));
     }
 }

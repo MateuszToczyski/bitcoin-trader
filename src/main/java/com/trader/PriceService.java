@@ -6,10 +6,11 @@ import java.util.concurrent.*;
 
 public class PriceService {
 
-    private double midPrice = 5000;
+    private double midPrice;
     private double askPrice;
     private double bidPrice;
     private double spread;
+    private boolean started = false;
     private List<PriceObserver> observers = new LinkedList<>();
 
     public PriceService(double spread) {
@@ -21,8 +22,9 @@ public class PriceService {
 
         CompletableFuture.runAsync(() -> {
 
-            //noinspection InfiniteLoopStatement
-            while(true) {
+            started = true;
+
+            while(started) {
 
                 updatePrices();
                 notifyObservers();
@@ -36,21 +38,27 @@ public class PriceService {
         });
     }
 
+    public void stop () {
+        started = false;
+    }
+
     public void addObserver(PriceObserver observer) {
         observers.add(observer);
     }
 
-    private void updatePrices() { //randomly increases or decreases prices
+    private void updatePrices() {
 
-        int randomNumber = new Random().nextInt(2);
+        //implementation
 
-        if(randomNumber == 0) {
-            midPrice *= 0.999;
-        } else {
-            midPrice *= 1.001;
-        }
-
-        updateBidAndAsk();
+//        int randomNumber = new Random().nextInt(2);
+//
+//        if(randomNumber == 0) {
+//            midPrice *= 0.999;
+//        } else {
+//            midPrice *= 1.001;
+//        }
+//
+//        updateBidAndAsk();
     }
 
     private void updateBidAndAsk() {

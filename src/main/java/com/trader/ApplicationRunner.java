@@ -16,9 +16,11 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
     private static PriceService priceService;
+    private static Account account;
 
-    public void run(PriceService priceService) {
+    public void run(PriceService priceService, Account account) {
         ApplicationRunner.priceService = priceService;
+        ApplicationRunner.account = account;
         launch();
     }
 
@@ -29,11 +31,16 @@ public class ApplicationRunner extends Application implements PriceObserver {
         priceService.start();
 
         primaryStage.setTitle("Bitcoin Trader");
-        primaryStage.setWidth(1000);
-        primaryStage.setHeight(500);
+        primaryStage.setWidth(900);
+        //primaryStage.setHeight(500);
         primaryStage.setScene(generateScene());
 
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() {
+        account.storeData();
     }
 
     private Scene generateScene() {
@@ -67,7 +74,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         upperGridPane.add(textFieldNominal, 3, 2);
 
         TabPane tabPane = new TabPane();
-        tabPane.setMinHeight(250);
+        tabPane.setMinHeight(300);
 
         Tab tabPositions = new Tab("Positions");
         tabPositions.closableProperty().setValue(false);
@@ -79,16 +86,18 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         GridPane bottomGridPane = new GridPane();
         bottomGridPane.setAlignment(Pos.TOP_LEFT);
-        bottomGridPane.setPadding(new Insets(10, 10, 10, 10));
+        bottomGridPane.setPadding(new Insets(15, 15, 15, 15));
         bottomGridPane.setHgap(10);
         bottomGridPane.setVgap(10);
-        bottomGridPane.setMinHeight(100);
-        bottomGridPane.setBorder(new Border(new BorderStroke(Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK,
-                BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE,
-                CornerRadii.EMPTY, new BorderWidths(1), Insets.EMPTY)));
+        bottomGridPane.setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, Color.LIGHTGRAY, Color.LIGHTGRAY,
+                Color.LIGHTGRAY, BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE,
+                BorderStrokeStyle.NONE, CornerRadii.EMPTY, new BorderWidths(1), Insets.EMPTY)));
 
-        Text textBalance = new Text("Balance:");
-        bottomGridPane.add(textBalance, 0, 0);
+        Text textBalanceLabel = new Text("Balance:");
+        bottomGridPane.add(textBalanceLabel, 0, 0);
+
+        //Text textBalanceAmount = new Text(String.valueOf(account.getBalance()));
+        //bottomGridPane.add(textBalanceAmount, 1, 0);
 
         VBox vBox = new VBox();
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
