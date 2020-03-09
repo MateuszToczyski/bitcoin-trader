@@ -1,6 +1,7 @@
 package com.trader;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.ObservableList;
 
 import java.text.NumberFormat;
 import java.util.*;
@@ -9,7 +10,7 @@ public class Account {
 
     private DataStorage dataStorage;
     private double balance;
-    private Set<Position> positions;
+    private ObservableList<Position> positions;
     private Set<Order> orders;
     private SimpleStringProperty balanceProperty;
     private NumberFormat formatter;
@@ -23,6 +24,10 @@ public class Account {
         formatter = NumberFormat.getCurrencyInstance();
         formatter.setCurrency(Currency.getInstance("USD"));
         balanceProperty = new SimpleStringProperty(formatter.format(balance));
+    }
+
+    public ObservableList<Position> getPositions() {
+        return positions;
     }
 
     public void amendBalance(double value) {

@@ -1,11 +1,13 @@
 package com.trader;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -15,6 +17,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
+    private TableView<Position> tableViewPositions;
     private static PriceService priceService;
     private static Account account;
 
@@ -78,6 +81,29 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Tab tabPositions = new Tab("Positions");
         tabPositions.closableProperty().setValue(false);
+
+        tableViewPositions = new TableView<>();
+
+        TableColumn<Position, Integer> columnPositionId = new TableColumn<>("ID");
+        columnPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+        TableColumn<Position, Position.Side> columnPositionSide = new TableColumn<>("Side");
+        columnPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
+
+        TableColumn<Position, Integer> columnPositionNominal = new TableColumn<>("Nominal");
+        columnPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
+
+        TableColumn<Position, Double> columnPositionOpenPrice = new TableColumn<>("Open price");
+        columnPositionOpenPrice.setCellValueFactory(new PropertyValueFactory<>("openPrice"));
+
+        TableColumn<Position, Double> columnPositionProfit = new TableColumn<>("Profit");
+        columnPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
+
+        tableViewPositions.setItems(account.getPositions());
+        tableViewPositions.getColumns().addAll(columnPositionId, columnPositionSide, columnPositionNominal,
+                columnPositionOpenPrice, columnPositionProfit);
+
+        tabPositions.setContent(tableViewPositions);
 
         Tab tabOrders = new Tab("Orders");
         tabOrders.closableProperty().setValue(false);
