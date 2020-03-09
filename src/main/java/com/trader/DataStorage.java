@@ -2,8 +2,6 @@ package com.trader;
 
 import javafx.collections.ObservableList;
 
-import java.util.*;
-
 public class DataStorage {
 
     public ObservableList<Position> getPositions() {
@@ -11,7 +9,7 @@ public class DataStorage {
         return null;
     }
 
-    public Set<Order> getOrders() {
+    public ObservableList<Order> getOrders() {
         //implementation
         return null;
     }

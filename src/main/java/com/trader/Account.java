@@ -2,16 +2,15 @@ package com.trader;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
-
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.Currency;
 
-public class Account {
+public class Account implements PriceObserver {
 
     private DataStorage dataStorage;
     private double balance;
     private ObservableList<Position> positions;
-    private Set<Order> orders;
+    private  ObservableList<Order> orders;
     private SimpleStringProperty balanceProperty;
     private NumberFormat formatter;
 
@@ -24,6 +23,15 @@ public class Account {
         formatter = NumberFormat.getCurrencyInstance();
         formatter.setCurrency(Currency.getInstance("USD"));
         balanceProperty = new SimpleStringProperty(formatter.format(balance));
+    }
+
+    @Override
+    public void update(double bidPrice, double askPrice) {
+        positions.forEach(position -> position.update(bidPrice, askPrice));
+    }
+
+    public void addPosition(Position position) {
+        positions.add(position);
     }
 
     public ObservableList<Position> getPositions() {

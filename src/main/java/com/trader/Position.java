@@ -1,6 +1,6 @@
 package com.trader;
 
-import java.util.Objects;
+import java.math.*;
 
 public class Position implements PriceObserver {
 
@@ -32,6 +32,27 @@ public class Position implements PriceObserver {
         id = idMax;
     }
 
+    public void update(double bidPrice, double askPrice) {
+
+        if(!open) {
+            return;
+        }
+
+        if(side.equals(Side.BUY)) {
+            closePrice = bidPrice;
+            profit = round(nominal * (closePrice - openPrice));
+        } else {
+            closePrice = askPrice;
+            profit = round(nominal * (openPrice - closePrice));
+        }
+    }
+
+    private double round(double value) {
+        BigDecimal bd = BigDecimal.valueOf(value);
+        bd = bd.setScale(2, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
     public int getId() {
         return id;
     }
@@ -58,21 +79,5 @@ public class Position implements PriceObserver {
 
     public double getProfit() {
         return profit;
-    }
-
-    @Override
-    public void update(double bidPrice, double askPrice) {
-
-        if(!open) {
-            return;
-        }
-
-        if(side.equals(Side.BUY)) {
-            closePrice = bidPrice;
-            profit = nominal * (closePrice - openPrice);
-        } else {
-            closePrice = askPrice;
-            profit = nominal * (openPrice - closePrice);
-        }
     }
 }

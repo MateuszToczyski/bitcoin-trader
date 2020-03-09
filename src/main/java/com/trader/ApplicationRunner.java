@@ -18,6 +18,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
     private TableView<Position> tableViewPositions;
+    private double marginRequirement = 0.05;
+
     private static PriceService priceService;
     private static Account account;
 
@@ -31,12 +33,12 @@ public class ApplicationRunner extends Application implements PriceObserver {
     public void start(Stage primaryStage) {
 
         priceService.addObserver(this);
+        priceService.addObserver(account);
         priceService.start();
 
         primaryStage.setTitle("Bitcoin Trader");
         primaryStage.setWidth(900);
         primaryStage.setScene(generateScene());
-
         primaryStage.show();
     }
 
@@ -63,18 +65,22 @@ public class ApplicationRunner extends Application implements PriceObserver {
         textAsk.textProperty().bind(askPriceProperty);
         upperGridPane.add(textAsk, 4, 1);
 
-        Button buttonSell = new Button("SELL");
-        buttonSell.setMinWidth(60);
-        upperGridPane.add(buttonSell, 2, 2);
-
-        Button buttonBuy = new Button("BUY");
-        buttonBuy.setMinWidth(60);
-        upperGridPane.add(buttonBuy, 4, 2);
-
         TextField textFieldNominal = new TextField();
         textFieldNominal.setMaxWidth(70);
         textFieldNominal.setText(String.valueOf(0.01));
         upperGridPane.add(textFieldNominal, 3, 2);
+
+        Button buttonSell = new Button("SELL");
+        buttonSell.setMinWidth(60);
+        buttonSell.setOnAction(event -> account.addPosition(new Position(Position.Side.SELL,
+                Double.parseDouble(textFieldNominal.getText()), priceService.getBidPrice(), marginRequirement)));
+        upperGridPane.add(buttonSell, 2, 2);
+
+        Button buttonBuy = new Button("BUY");
+        buttonBuy.setMinWidth(60);
+        buttonBuy.setOnAction(event -> account.addPosition(new Position(Position.Side.BUY,
+                Double.parseDouble(textFieldNominal.getText()), priceService.getAskPrice(), marginRequirement)));
+        upperGridPane.add(buttonBuy, 4, 2);
 
         TabPane tabPane = new TabPane();
         tabPane.setMinHeight(300);
@@ -100,8 +106,11 @@ public class ApplicationRunner extends Application implements PriceObserver {
         columnPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
 
         tableViewPositions.setItems(account.getPositions());
+        //noinspection unchecked
         tableViewPositions.getColumns().addAll(columnPositionId, columnPositionSide, columnPositionNominal,
                 columnPositionOpenPrice, columnPositionProfit);
+
+        tableViewPositions.getColumns().forEach(column -> column.setMinWidth(80));
 
         tabPositions.setContent(tableViewPositions);
 
@@ -141,6 +150,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
     public void update(double bidPrice, double askPrice) {
         bidPriceProperty.setValue(String.valueOf(bidPrice));
         askPriceProperty.setValue(String.valueOf(askPrice));
+        Platform.runLater(() -> tableViewPositions.refresh());
     }
 
     private void depositWithdrawal() {

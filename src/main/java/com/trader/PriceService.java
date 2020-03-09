@@ -37,16 +37,24 @@ public class PriceService {
         started = false;
     }
 
+    public void addObserver(PriceObserver observer) {
+        observers.add(observer);
+    }
+
+    public double getAskPrice() {
+        return askPrice;
+    }
+
+    public double getBidPrice() {
+        return bidPrice;
+    }
+
     private void pause() {
         try {
             TimeUnit.SECONDS.sleep(1);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
-
-    public void addObserver(PriceObserver observer) {
-        observers.add(observer);
     }
 
     private void updatePrices() {
@@ -62,7 +70,7 @@ public class PriceService {
     }
 
     private double round(double value) {
-        BigDecimal bd = new BigDecimal(Double.toString(value));
+        BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(2, RoundingMode.HALF_UP);
         return bd.doubleValue();
     }

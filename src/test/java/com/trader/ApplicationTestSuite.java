@@ -1,10 +1,7 @@
 package com.trader;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.collections.*;
 import org.junit.Test;
-
-import java.util.*;
 
 import static org.mockito.Mockito.*;
 
@@ -20,7 +17,7 @@ public class ApplicationTestSuite {
 
         DataStorage dataStorageMock = mock(DataStorage.class);
         when(dataStorageMock.getPositions()).thenReturn(positions);
-        when(dataStorageMock.getOrders()).thenReturn(new HashSet<>());
+        when(dataStorageMock.getOrders()).thenReturn(FXCollections.observableArrayList());
         when(dataStorageMock.getBalance()).thenReturn(10000.0);
         doNothing().when(dataStorageMock).storeData();
 
