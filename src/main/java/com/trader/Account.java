@@ -1,6 +1,7 @@
 package com.trader;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import java.text.NumberFormat;
 import java.util.Currency;
@@ -9,15 +10,17 @@ public class Account implements PriceObserver {
 
     private DataStorage dataStorage;
     private double balance;
-    private ObservableList<Position> positions;
-    private  ObservableList<Order> orders;
+    private ObservableList<Position> openPositions;
+    private ObservableList<Position> closedPositions;
+    private ObservableList<Order> orders;
     private SimpleStringProperty balanceProperty;
     private NumberFormat formatter;
 
     public Account(DataStorage dataStorage) {
         this.dataStorage = dataStorage;
         balance = dataStorage.getBalance();
-        positions = dataStorage.getPositions();
+        openPositions = dataStorage.getPositions();
+        closedPositions = FXCollections.observableArrayList();
         orders = dataStorage.getOrders();
 
         formatter = NumberFormat.getCurrencyInstance();
@@ -27,15 +30,15 @@ public class Account implements PriceObserver {
 
     @Override
     public void update(double bidPrice, double askPrice) {
-        positions.forEach(position -> position.update(bidPrice, askPrice));
+        openPositions.forEach(position -> position.update(bidPrice, askPrice));
     }
 
     public void addPosition(Position position) {
-        positions.add(position);
+        openPositions.add(position);
     }
 
-    public ObservableList<Position> getPositions() {
-        return positions;
+    public ObservableList<Position> getOpenPositions() {
+        return openPositions;
     }
 
     public void amendBalance(double value) {
@@ -49,5 +52,12 @@ public class Account implements PriceObserver {
 
     public SimpleStringProperty balanceProperty() {
         return balanceProperty;
+    }
+
+    public void closePosition(Position position) {
+        position.close();
+        amendBalance(position.getProfit());
+        openPositions.remove(position);
+        closedPositions.add(position);
     }
 }

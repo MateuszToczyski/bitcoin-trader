@@ -1,6 +1,7 @@
 package com.trader;
 
 import java.math.*;
+import java.util.Objects;
 
 public class Position implements PriceObserver {
 
@@ -47,10 +48,8 @@ public class Position implements PriceObserver {
         }
     }
 
-    private double round(double value) {
-        BigDecimal bd = BigDecimal.valueOf(value);
-        bd = bd.setScale(2, RoundingMode.HALF_UP);
-        return bd.doubleValue();
+    public void close() {
+        open = false;
     }
 
     public int getId() {
@@ -79,5 +78,24 @@ public class Position implements PriceObserver {
 
     public double getProfit() {
         return profit;
+    }
+
+    private double round(double value) {
+        BigDecimal bd = BigDecimal.valueOf(value);
+        bd = bd.setScale(2, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Position position = (Position) o;
+        return id == position.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

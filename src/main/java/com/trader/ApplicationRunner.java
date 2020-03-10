@@ -12,6 +12,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class ApplicationRunner extends Application implements PriceObserver {
 
@@ -105,10 +106,47 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Double> columnPositionProfit = new TableColumn<>("Profit");
         columnPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
 
-        tableViewPositions.setItems(account.getPositions());
+        TableColumn<Position, String> columnPositionAction = new TableColumn<>("");
+        columnPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
+
+        Callback<TableColumn<Position, String>, TableCell<Position, String>> cellFactory =
+                new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
+                    @Override
+                    public TableCell<Position, String> call(final TableColumn<Position, String> param) {
+
+                        Button closeButton = new Button("X");
+                        closeButton.setPadding(new Insets(0, 4, 0, 4));
+
+                        return new TableCell<Position, String>() {
+
+                            @Override
+                            public void updateItem(String item, boolean empty) {
+
+                                super.updateItem(item, empty);
+
+                                if (empty) {
+                                    setGraphic(null);
+                                } else {
+                                    closeButton.setOnAction(event -> {
+                                        Position position = getTableView().getItems().get(getIndex());
+                                        account.closePosition(position);
+                                    });
+                                    setGraphic(closeButton);
+                                }
+
+                                setText(null);
+                                setPadding(new Insets(3));
+                            }
+                        };
+                    }
+                };
+
+        columnPositionAction.setCellFactory(cellFactory);
+
+        tableViewPositions.setItems(account.getOpenPositions());
         //noinspection unchecked
         tableViewPositions.getColumns().addAll(columnPositionId, columnPositionSide, columnPositionNominal,
-                columnPositionOpenPrice, columnPositionProfit);
+                columnPositionOpenPrice, columnPositionProfit, columnPositionAction);
 
         tableViewPositions.getColumns().forEach(column -> column.setMinWidth(80));
 
