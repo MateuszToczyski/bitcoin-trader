@@ -3,6 +3,7 @@ package com.trader;
 import com.trader.account.*;
 import com.trader.exceptions.*;
 import com.trader.price.*;
+import com.trader.utils.*;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -24,6 +25,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
+    private SimpleStringProperty marginProperty = new SimpleStringProperty();
     private TableView<Position> tableViewPositions;
     private TextField textFieldNominal;
     private StringBuilder depositWithdrawalInput = new StringBuilder();
@@ -33,7 +35,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private static Account account;
     private static NumberFormat currencyFormatter;
     private static NumberFormat priceFormatter;
-    private static double marginRequirement = 0.05;
+    private static double marginRequirement;
 
     public void run(PriceService priceService, Account account, NumberFormat currencyFormatter,
                     NumberFormat priceFormatter, double marginRequirement) {
@@ -68,6 +70,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
     public void update(double bidPrice, double askPrice) {
         bidPriceProperty.setValue(String.valueOf(bidPrice));
         askPriceProperty.setValue(String.valueOf(askPrice));
+        updateMarginProperty();
         Platform.runLater(() -> tableViewPositions.refresh());
     }
 
@@ -93,6 +96,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         textFieldNominal.setOnKeyPressed(event -> Platform.runLater(() -> {
             appendNominalInput(event);
             textFieldNominal.setText(formatNominalInput(priceFormatter));
+            updateMarginProperty();
         }));
         upperGridPane.add(textFieldNominal, 3, 2);
 
@@ -114,7 +118,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
         });
         upperGridPane.add(buttonBuy, 4, 2);
 
-        //TODO Add field displaying required margin
+        Text textMarginRequired = new Text();
+        textMarginRequired.textProperty().bind(marginProperty);
+        upperGridPane.add(textMarginRequired, 3, 3);
 
         TabPane tabPane = new TabPane();
         tabPane.setMinHeight(300);
@@ -333,5 +339,17 @@ public class ApplicationRunner extends Application implements PriceObserver {
             Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds!", ButtonType.OK);
             alert.show();
         }
+    }
+
+    private void updateMarginProperty() {
+
+        double margin = 0;
+
+        if(nominalInput.length() > 0) {
+            margin = Double.parseDouble(askPriceProperty.getValue()) *
+                    Double.parseDouble(nominalInput.toString()) * ApplicationRunner.marginRequirement;
+        }
+
+        marginProperty.setValue("Margin:\n" + priceFormatter.format(MathOperations.round(margin, 2)));
     }
 }
