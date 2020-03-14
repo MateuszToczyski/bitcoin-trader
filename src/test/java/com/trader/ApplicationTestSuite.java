@@ -1,5 +1,8 @@
 package com.trader;
 
+import com.trader.account.Account;
+import com.trader.account.DataStorage;
+import com.trader.price.PriceService;
 import javafx.collections.*;
 import org.junit.Test;
 

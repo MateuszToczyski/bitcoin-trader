@@ -1,4 +1,4 @@
-package com.trader;
+package com.trader.price;
 
 import java.math.*;
 import java.util.*;

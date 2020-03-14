@@ -1,5 +1,7 @@
 package com.trader;
 
+import com.trader.price.PriceFeed;
+
 import java.util.Random;
 
 public class PriceFeedStub extends PriceFeed {

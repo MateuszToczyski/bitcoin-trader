@@ -1,4 +1,6 @@
-package com.trader;
+package com.trader.account;
+
+import com.trader.price.PriceObserver;
 
 import java.math.*;
 import java.util.Objects;

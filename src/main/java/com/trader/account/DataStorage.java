@@ -1,4 +1,4 @@
-package com.trader;
+package com.trader.account;
 
 import javafx.collections.ObservableList;
 

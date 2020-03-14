@@ -1,5 +1,6 @@
-package com.trader;
+package com.trader.account;
 
+import com.trader.price.PriceObserver;
 import com.trader.exceptions.BalanceExceededException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
