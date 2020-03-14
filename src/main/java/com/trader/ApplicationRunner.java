@@ -28,20 +28,20 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private TextField textFieldNominal;
     private StringBuilder depositWithdrawalInput = new StringBuilder();
     private StringBuilder nominalInput = new StringBuilder();
-    private double marginRequirement = 0.05;
-    //TODO Add marginRequirement to constructor
 
     private static PriceService priceService;
     private static Account account;
     private static NumberFormat currencyFormatter;
     private static NumberFormat priceFormatter;
+    private static double marginRequirement = 0.05;
 
     public void run(PriceService priceService, Account account, NumberFormat currencyFormatter,
-                    NumberFormat priceFormatter) {
+                    NumberFormat priceFormatter, double marginRequirement) {
         ApplicationRunner.priceService = priceService;
         ApplicationRunner.account = account;
         ApplicationRunner.currencyFormatter = currencyFormatter;
         ApplicationRunner.priceFormatter = priceFormatter;
+        ApplicationRunner.marginRequirement = marginRequirement;
         launch();
     }
 

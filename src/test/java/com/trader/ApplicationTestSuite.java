@@ -37,6 +37,6 @@ public class ApplicationTestSuite {
 
         Account account = new Account(dataStorageMock, currencyFormatter);
 
-        applicationRunner.run(priceService, account, currencyFormatter, priceFormatter);
+        applicationRunner.run(priceService, account, currencyFormatter, priceFormatter, 0.05);
     }
 }
