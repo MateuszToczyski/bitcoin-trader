@@ -3,8 +3,8 @@ package com.trader;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
 import java.text.NumberFormat;
-import java.util.Currency;
 
 public class Account implements PriceObserver {
 
@@ -16,15 +16,13 @@ public class Account implements PriceObserver {
     private SimpleStringProperty balanceProperty;
     private NumberFormat formatter;
 
-    public Account(DataStorage dataStorage) {
+    public Account(DataStorage dataStorage, NumberFormat formatter) {
         this.dataStorage = dataStorage;
+        this.formatter = formatter;
         balance = dataStorage.getBalance();
         openPositions = dataStorage.getPositions();
         closedPositions = FXCollections.observableArrayList();
         orders = dataStorage.getOrders();
-
-        formatter = NumberFormat.getCurrencyInstance();
-        formatter.setCurrency(Currency.getInstance("USD"));
         balanceProperty = new SimpleStringProperty(formatter.format(balance));
     }
 

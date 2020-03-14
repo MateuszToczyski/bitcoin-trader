@@ -8,25 +8,36 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import java.text.NumberFormat;
+
 public class ApplicationRunner extends Application implements PriceObserver {
 
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
     private TableView<Position> tableViewPositions;
+    private TextField textFieldNominal;
+    private StringBuilder userInput = new StringBuilder();
     private double marginRequirement = 0.05;
 
     private static PriceService priceService;
     private static Account account;
+    private static NumberFormat currencyFormatter;
+    private static NumberFormat priceFormatter;
 
-    public void run(PriceService priceService, Account account) {
+    public void run(PriceService priceService, Account account, NumberFormat currencyFormatter,
+                    NumberFormat priceFormatter) {
         ApplicationRunner.priceService = priceService;
         ApplicationRunner.account = account;
+        ApplicationRunner.currencyFormatter = currencyFormatter;
+        ApplicationRunner.priceFormatter = priceFormatter;
         launch();
     }
 
@@ -49,6 +60,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
         account.storeData();
     }
 
+    @Override
+    public void update(double bidPrice, double askPrice) {
+        bidPriceProperty.setValue(String.valueOf(bidPrice));
+        askPriceProperty.setValue(String.valueOf(askPrice));
+        Platform.runLater(() -> tableViewPositions.refresh());
+    }
+
     private Scene generateScene() {
 
         GridPane upperGridPane = new GridPane();
@@ -66,21 +84,24 @@ public class ApplicationRunner extends Application implements PriceObserver {
         textAsk.textProperty().bind(askPriceProperty);
         upperGridPane.add(textAsk, 4, 1);
 
-        TextField textFieldNominal = new TextField();
+        textFieldNominal = new TextField(priceFormatter.format(0));
         textFieldNominal.setMaxWidth(70);
-        textFieldNominal.setText(String.valueOf(0.01));
+        textFieldNominal.setOnKeyPressed(event -> Platform.runLater(() -> {
+            appendUserInput(event);
+            textFieldNominal.setText(formatUserInput(priceFormatter));
+        }));
         upperGridPane.add(textFieldNominal, 3, 2);
 
         Button buttonSell = new Button("SELL");
         buttonSell.setMinWidth(60);
         buttonSell.setOnAction(event -> account.addPosition(new Position(Position.Side.SELL,
-                Double.parseDouble(textFieldNominal.getText()), priceService.getBidPrice(), marginRequirement)));
+                Double.parseDouble(userInput.toString()) / 100, priceService.getBidPrice(), marginRequirement)));
         upperGridPane.add(buttonSell, 2, 2);
 
         Button buttonBuy = new Button("BUY");
         buttonBuy.setMinWidth(60);
         buttonBuy.setOnAction(event -> account.addPosition(new Position(Position.Side.BUY,
-                Double.parseDouble(textFieldNominal.getText()), priceService.getAskPrice(), marginRequirement)));
+                Double.parseDouble(userInput.toString()) / 100, priceService.getAskPrice(), marginRequirement)));
         upperGridPane.add(buttonBuy, 4, 2);
 
         TabPane tabPane = new TabPane();
@@ -108,40 +129,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         TableColumn<Position, String> columnPositionAction = new TableColumn<>("");
         columnPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-
-        Callback<TableColumn<Position, String>, TableCell<Position, String>> cellFactory =
-                new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
-                    @Override
-                    public TableCell<Position, String> call(final TableColumn<Position, String> param) {
-
-                        Button closeButton = new Button("X");
-                        closeButton.setPadding(new Insets(0, 4, 0, 4));
-
-                        return new TableCell<Position, String>() {
-
-                            @Override
-                            public void updateItem(String item, boolean empty) {
-
-                                super.updateItem(item, empty);
-
-                                if (empty) {
-                                    setGraphic(null);
-                                } else {
-                                    closeButton.setOnAction(event -> {
-                                        Position position = getTableView().getItems().get(getIndex());
-                                        account.closePosition(position);
-                                    });
-                                    setGraphic(closeButton);
-                                }
-
-                                setText(null);
-                                setPadding(new Insets(3));
-                            }
-                        };
-                    }
-                };
-
-        columnPositionAction.setCellFactory(cellFactory);
+        columnPositionAction.setCellFactory(generateCellFactory());
 
         tableViewPositions.setItems(account.getOpenPositions());
         //noinspection unchecked
@@ -184,14 +172,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
         return new Scene(vBox);
     }
 
-    @Override
-    public void update(double bidPrice, double askPrice) {
-        bidPriceProperty.setValue(String.valueOf(bidPrice));
-        askPriceProperty.setValue(String.valueOf(askPrice));
-        Platform.runLater(() -> tableViewPositions.refresh());
-    }
-
     private void depositWithdrawal() {
+
+        clearNominalValue();
 
         Stage stage = new Stage();
         stage.setWidth(205);
@@ -203,14 +186,19 @@ public class ApplicationRunner extends Application implements PriceObserver {
         gridPane.setVgap(20);
         gridPane.setHgap(20);
 
-        TextField textFieldAmount = new TextField();
+        TextField textFieldAmount = new TextField(currencyFormatter.format(0));
         textFieldAmount.setMinWidth(150);
+        textFieldAmount.setOnKeyPressed(event -> Platform.runLater(() -> {
+            appendUserInput(event);
+            textFieldAmount.setText(formatUserInput(currencyFormatter));
+        }));
         gridPane.add(textFieldAmount, 0, 0, 2, 1);
 
         Button buttonDeposit = new Button("Deposit");
         buttonDeposit.setMinWidth(70);
         buttonDeposit.setOnAction(event -> {
-            account.amendBalance(Double.parseDouble(textFieldAmount.getText()));
+            account.amendBalance(Double.parseDouble(userInput.toString()) / 100);
+            clearNominalValue();
             stage.close();
         });
         gridPane.add(buttonDeposit, 0, 1);
@@ -218,7 +206,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Button buttonWithdraw = new Button("Withdraw");
         buttonWithdraw.setMinWidth(70);
         buttonWithdraw.setOnAction(event -> {
-            account.amendBalance( - Double.parseDouble(textFieldAmount.getText()));
+            account.amendBalance( - Double.parseDouble(userInput.toString()) / 100);
+            clearNominalValue();
             stage.close();
         });
         gridPane.add(buttonWithdraw, 1, 1);
@@ -226,6 +215,62 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Scene scene = new Scene(gridPane);
 
         stage.setScene(scene);
+        stage.setOnCloseRequest(event -> clearNominalValue());
         stage.show();
+    }
+
+    private void clearNominalValue() {
+        userInput.setLength(0);
+        Platform.runLater(() -> textFieldNominal.setText(priceFormatter.format(0)));
+    }
+
+    private void appendUserInput(KeyEvent event) {
+        if(event.getCode().equals(KeyCode.BACK_SPACE) || event.getCode().equals(KeyCode.DELETE)) {
+            userInput.setLength(0);
+        } else if(event.getCode().toString().length() == 6 &&
+                event.getCode().toString().substring(0, 5).equals("DIGIT")) {
+            userInput.append(event.getText().charAt(0));
+        }
+    }
+
+    private String formatUserInput(NumberFormat formatter) {
+        if(userInput.length() == 0) {
+            return formatter.format(0);
+        } else {
+            return formatter.format(Double.parseDouble(userInput.toString()) / 100);
+        }
+    }
+
+    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateCellFactory() {
+        return new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
+            @Override
+            public TableCell<Position, String> call(final TableColumn<Position, String> param) {
+
+                Button closeButton = new Button("X");
+                closeButton.setPadding(new Insets(0, 4, 0, 4));
+
+                return new TableCell<Position, String>() {
+
+                    @Override
+                    public void updateItem(String item, boolean empty) {
+
+                        super.updateItem(item, empty);
+
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            closeButton.setOnAction(event -> {
+                                Position position = getTableView().getItems().get(getIndex());
+                                account.closePosition(position);
+                            });
+                            setGraphic(closeButton);
+                        }
+
+                        setText(null);
+                        setPadding(new Insets(3));
+                    }
+                };
+            }
+        };
     }
 }

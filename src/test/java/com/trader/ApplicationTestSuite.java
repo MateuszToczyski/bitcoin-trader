@@ -3,6 +3,9 @@ package com.trader;
 import javafx.collections.*;
 import org.junit.Test;
 
+import java.text.NumberFormat;
+import java.util.Currency;
+
 import static org.mockito.Mockito.*;
 
 public class ApplicationTestSuite {
@@ -18,9 +21,20 @@ public class ApplicationTestSuite {
 
         PriceFeedStub priceFeedStub = new PriceFeedStub();
         PriceService priceService = new PriceService(1, priceFeedStub);
-        Account account = new Account(dataStorageMock);
+
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
-        applicationRunner.run(priceService, account);
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance();
+        currencyFormatter.setCurrency(Currency.getInstance("USD"));
+        currencyFormatter.setMinimumFractionDigits(2);
+        currencyFormatter.setGroupingUsed(true);
+
+        NumberFormat priceFormatter = NumberFormat.getNumberInstance();
+        priceFormatter.setMinimumFractionDigits(2);
+        priceFormatter.setGroupingUsed(true);
+
+        Account account = new Account(dataStorageMock, currencyFormatter);
+
+        applicationRunner.run(priceService, account, currencyFormatter, priceFormatter);
     }
 }
