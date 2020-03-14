@@ -1,8 +1,8 @@
 package com.trader.account;
 
 import com.trader.price.*;
+import com.trader.utils.*;
 
-import java.math.*;
 import java.util.Objects;
 
 public class Position implements PriceObserver {
@@ -29,7 +29,7 @@ public class Position implements PriceObserver {
         this.side = side;
         this.nominal = nominal;
         this.openPrice = openPrice;
-        this.margin = round(marginRequirement * nominal * openPrice);
+        this.margin = MathOperations.round(marginRequirement * nominal * openPrice, 2);
 
         idMax++;
         id = idMax;
@@ -43,10 +43,10 @@ public class Position implements PriceObserver {
 
         if(side.equals(Side.BUY)) {
             closePrice = bidPrice;
-            profit = round(nominal * (closePrice - openPrice));
+            profit = MathOperations.round(nominal * (closePrice - openPrice), 2);
         } else {
             closePrice = askPrice;
-            profit = round(nominal * (openPrice - closePrice));
+            profit = MathOperations.round(nominal * (openPrice - closePrice), 2);
         }
     }
 
@@ -84,12 +84,6 @@ public class Position implements PriceObserver {
 
     public double getMargin() {
         return margin;
-    }
-
-    private double round(double value) {
-        BigDecimal bd = BigDecimal.valueOf(value);
-        bd = bd.setScale(2, RoundingMode.HALF_UP);
-        return bd.doubleValue();
     }
 
     @Override
