@@ -1,10 +1,8 @@
 package com.trader;
 
-import com.trader.account.Account;
-import com.trader.account.Position;
-import com.trader.exceptions.BalanceExceededException;
-import com.trader.price.PriceObserver;
-import com.trader.price.PriceService;
+import com.trader.account.*;
+import com.trader.exceptions.*;
+import com.trader.price.*;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -13,8 +11,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;

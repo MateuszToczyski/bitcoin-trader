@@ -1,7 +1,7 @@
 package com.trader.account;
 
-import com.trader.price.PriceObserver;
-import com.trader.exceptions.BalanceExceededException;
+import com.trader.price.*;
+import com.trader.exceptions.*;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
