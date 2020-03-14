@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public class Position implements PriceObserver {
 
-    enum Side {
+    public enum Side {
         BUY,
         SELL
     }
