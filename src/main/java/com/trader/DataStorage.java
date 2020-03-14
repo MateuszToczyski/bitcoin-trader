@@ -19,6 +19,11 @@ public class DataStorage {
         return 0;
     }
 
+    public double getMargin() {
+        //implementation
+        return 0;
+    }
+
     public void storeData() {
         //implementation
     }

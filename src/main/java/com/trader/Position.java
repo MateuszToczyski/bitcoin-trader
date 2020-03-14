@@ -80,6 +80,10 @@ public class Position implements PriceObserver {
         return profit;
     }
 
+    public double getMargin() {
+        return margin;
+    }
+
     private double round(double value) {
         BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(2, RoundingMode.HALF_UP);

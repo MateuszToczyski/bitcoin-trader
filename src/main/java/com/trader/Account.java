@@ -1,5 +1,6 @@
 package com.trader;
 
+import com.trader.exceptions.BalanceExceededException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -8,22 +9,28 @@ import java.text.NumberFormat;
 
 public class Account implements PriceObserver {
 
-    private DataStorage dataStorage;
     private double balance;
+    private double margin;
+    private SimpleStringProperty balanceProperty;
+    private SimpleStringProperty marginProperty;
+    private DataStorage dataStorage;
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
-    private SimpleStringProperty balanceProperty;
-    private NumberFormat formatter;
+    private NumberFormat currencyFormatter;
 
-    public Account(DataStorage dataStorage, NumberFormat formatter) {
+    public Account(DataStorage dataStorage, NumberFormat currencyFormatter) {
         this.dataStorage = dataStorage;
-        this.formatter = formatter;
+        this.currencyFormatter = currencyFormatter;
         balance = dataStorage.getBalance();
-        openPositions = dataStorage.getPositions();
         closedPositions = FXCollections.observableArrayList();
         orders = dataStorage.getOrders();
-        balanceProperty = new SimpleStringProperty(formatter.format(balance));
+
+        openPositions = FXCollections.observableArrayList();
+        openPositions.addAll(dataStorage.getPositions());
+
+        balanceProperty = new SimpleStringProperty(currencyFormatter.format(balance));
+        marginProperty = new SimpleStringProperty(currencyFormatter.format(margin));
     }
 
     @Override
@@ -32,16 +39,28 @@ public class Account implements PriceObserver {
     }
 
     public void addPosition(Position position) {
+
+        if(position.getMargin() > balance) {
+            throw new BalanceExceededException();
+        }
+
+        amendBalance(-position.getMargin());
+        amendMargin(position.getMargin());
         openPositions.add(position);
     }
 
-    public ObservableList<Position> getOpenPositions() {
+    public ObservableList<Position> openPositions() {
         return openPositions;
     }
 
     public void amendBalance(double value) {
         this.balance += value;
-        balanceProperty.setValue(formatter.format(balance));
+        balanceProperty.setValue(currencyFormatter.format(balance));
+    }
+
+    public void amendMargin(double value) {
+        this.margin += value;
+        marginProperty.setValue(currencyFormatter.format(margin));
     }
 
     public void storeData() {
@@ -52,9 +71,14 @@ public class Account implements PriceObserver {
         return balanceProperty;
     }
 
+    public SimpleStringProperty marginProperty() {
+        return marginProperty;
+    }
+
     public void closePosition(Position position) {
         position.close();
-        amendBalance(position.getProfit());
+        amendBalance(position.getProfit() + position.getMargin());
+        amendMargin(-position.getMargin());
         openPositions.remove(position);
         closedPositions.add(position);
     }

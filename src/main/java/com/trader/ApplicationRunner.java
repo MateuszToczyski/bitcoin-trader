@@ -1,5 +1,6 @@
 package com.trader;
 
+import com.trader.exceptions.BalanceExceededException;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -94,14 +95,20 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Button buttonSell = new Button("SELL");
         buttonSell.setMinWidth(60);
-        buttonSell.setOnAction(event -> account.addPosition(new Position(Position.Side.SELL,
-                Double.parseDouble(userInput.toString()) / 100, priceService.getBidPrice(), marginRequirement)));
+        buttonSell.setOnAction(event -> {
+            Position position = new Position(Position.Side.SELL, Double.parseDouble(userInput.toString()) / 100,
+                    priceService.getBidPrice(), marginRequirement);
+            tryAddPosition(position);
+        });
         upperGridPane.add(buttonSell, 2, 2);
 
         Button buttonBuy = new Button("BUY");
         buttonBuy.setMinWidth(60);
-        buttonBuy.setOnAction(event -> account.addPosition(new Position(Position.Side.BUY,
-                Double.parseDouble(userInput.toString()) / 100, priceService.getAskPrice(), marginRequirement)));
+        buttonBuy.setOnAction(event -> {
+            Position position = new Position(Position.Side.BUY, Double.parseDouble(userInput.toString()) / 100,
+                    priceService.getAskPrice(), marginRequirement);
+            tryAddPosition(position);
+        });
         upperGridPane.add(buttonBuy, 4, 2);
 
         TabPane tabPane = new TabPane();
@@ -124,6 +131,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Double> columnPositionOpenPrice = new TableColumn<>("Open price");
         columnPositionOpenPrice.setCellValueFactory(new PropertyValueFactory<>("openPrice"));
 
+        TableColumn<Position, Double> columnPositionMargin = new TableColumn<>("Margin");
+        columnPositionMargin.setCellValueFactory(new PropertyValueFactory<>("margin"));
+
         TableColumn<Position, Double> columnPositionProfit = new TableColumn<>("Profit");
         columnPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
 
@@ -131,10 +141,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
         columnPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
         columnPositionAction.setCellFactory(generateCellFactory());
 
-        tableViewPositions.setItems(account.getOpenPositions());
+        tableViewPositions.setItems(account.openPositions());
         //noinspection unchecked
         tableViewPositions.getColumns().addAll(columnPositionId, columnPositionSide, columnPositionNominal,
-                columnPositionOpenPrice, columnPositionProfit, columnPositionAction);
+                columnPositionOpenPrice, columnPositionMargin, columnPositionProfit, columnPositionAction);
 
         tableViewPositions.getColumns().forEach(column -> column.setMinWidth(80));
 
@@ -160,6 +170,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Text textBalanceAmount = new Text();
         textBalanceAmount.textProperty().bind(account.balanceProperty());
         bottomGridPane.add(textBalanceAmount, 1, 1);
+
+        Text textMarginLabel = new Text("Margin");
+        bottomGridPane.add(textMarginLabel, 2, 0);
+
+        Text textMarginAmount = new Text();
+        textMarginAmount.textProperty().bind(account.marginProperty());
+        bottomGridPane.add(textMarginAmount, 2, 1);
 
         Button buttonDepositWithdrawal = new Button("Deposit / Withdrawal");
         buttonDepositWithdrawal.setMinHeight(35);
@@ -272,5 +289,14 @@ public class ApplicationRunner extends Application implements PriceObserver {
                 };
             }
         };
+    }
+
+    private void tryAddPosition(Position position) {
+        try {
+            account.addPosition(position);
+        } catch (BalanceExceededException ex) {
+            Alert alert = new Alert(Alert.AlertType.NONE, "Not enough balance!", ButtonType.OK);
+            alert.show();
+        }
     }
 }
