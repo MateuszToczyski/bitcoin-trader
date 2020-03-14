@@ -29,7 +29,7 @@ public class Position implements PriceObserver {
         this.side = side;
         this.nominal = nominal;
         this.openPrice = openPrice;
-        this.margin = marginRequirement * nominal * openPrice;
+        this.margin = round(marginRequirement * nominal * openPrice);
 
         idMax++;
         id = idMax;

@@ -26,8 +26,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
     private TableView<Position> tableViewPositions;
     private TextField textFieldNominal;
-    private StringBuilder userInput = new StringBuilder();
+    private StringBuilder depositWithdrawalInput = new StringBuilder();
+    private StringBuilder nominalInput = new StringBuilder();
     private double marginRequirement = 0.05;
+    //TODO Add marginRequirement to constructor
 
     private static PriceService priceService;
     private static Account account;
@@ -89,15 +91,15 @@ public class ApplicationRunner extends Application implements PriceObserver {
         textFieldNominal = new TextField(priceFormatter.format(0));
         textFieldNominal.setMaxWidth(70);
         textFieldNominal.setOnKeyPressed(event -> Platform.runLater(() -> {
-            appendUserInput(event);
-            textFieldNominal.setText(formatUserInput(priceFormatter));
+            appendNominalInput(event);
+            textFieldNominal.setText(formatNominalInput(priceFormatter));
         }));
         upperGridPane.add(textFieldNominal, 3, 2);
 
         Button buttonSell = new Button("SELL");
         buttonSell.setMinWidth(60);
         buttonSell.setOnAction(event -> {
-            Position position = new Position(Position.Side.SELL, Double.parseDouble(userInput.toString()) / 100,
+            Position position = new Position(Position.Side.SELL, Double.parseDouble(nominalInput.toString()),
                     priceService.getBidPrice(), marginRequirement);
             tryAddPosition(position);
         });
@@ -106,11 +108,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Button buttonBuy = new Button("BUY");
         buttonBuy.setMinWidth(60);
         buttonBuy.setOnAction(event -> {
-            Position position = new Position(Position.Side.BUY, Double.parseDouble(userInput.toString()) / 100,
+            Position position = new Position(Position.Side.BUY, Double.parseDouble(nominalInput.toString()),
                     priceService.getAskPrice(), marginRequirement);
             tryAddPosition(position);
         });
         upperGridPane.add(buttonBuy, 4, 2);
+
+        //TODO Add field displaying required margin
 
         TabPane tabPane = new TabPane();
         tabPane.setMinHeight(300);
@@ -192,8 +196,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private void depositWithdrawal() {
 
-        clearNominalValue();
-
         Stage stage = new Stage();
         stage.setWidth(205);
         stage.setHeight(140);
@@ -207,16 +209,16 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TextField textFieldAmount = new TextField(currencyFormatter.format(0));
         textFieldAmount.setMinWidth(150);
         textFieldAmount.setOnKeyPressed(event -> Platform.runLater(() -> {
-            appendUserInput(event);
-            textFieldAmount.setText(formatUserInput(currencyFormatter));
+            appendDepositWithdrawalInput(event);
+            textFieldAmount.setText(formatDepositWithdrawalInput(currencyFormatter));
         }));
         gridPane.add(textFieldAmount, 0, 0, 2, 1);
 
         Button buttonDeposit = new Button("Deposit");
         buttonDeposit.setMinWidth(70);
         buttonDeposit.setOnAction(event -> {
-            account.amendBalance(Double.parseDouble(userInput.toString()) / 100);
-            clearNominalValue();
+            account.amendBalance(Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+            depositWithdrawalInput.setLength(0);
             stage.close();
         });
         gridPane.add(buttonDeposit, 0, 1);
@@ -224,38 +226,70 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Button buttonWithdraw = new Button("Withdraw");
         buttonWithdraw.setMinWidth(70);
         buttonWithdraw.setOnAction(event -> {
-            account.amendBalance( - Double.parseDouble(userInput.toString()) / 100);
-            clearNominalValue();
-            stage.close();
+            if(depositWithdrawalInput.length() > 0 &&
+                    Double.parseDouble(depositWithdrawalInput.toString()) / 100 > account.getBalance()) {
+                depositWithdrawalInput = new StringBuilder(String.valueOf(account.getBalance() * 100));
+                textFieldAmount.setText(formatDepositWithdrawalInput(currencyFormatter));
+            } else {
+                account.amendBalance( - Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+                depositWithdrawalInput.setLength(0);
+                stage.close();
+            }
         });
         gridPane.add(buttonWithdraw, 1, 1);
 
         Scene scene = new Scene(gridPane);
 
         stage.setScene(scene);
-        stage.setOnCloseRequest(event -> clearNominalValue());
+        stage.setOnCloseRequest(event -> depositWithdrawalInput.setLength(0));
         stage.show();
     }
 
-    private void clearNominalValue() {
-        userInput.setLength(0);
-        Platform.runLater(() -> textFieldNominal.setText(priceFormatter.format(0)));
-    }
-
-    private void appendUserInput(KeyEvent event) {
+    private void appendDepositWithdrawalInput(KeyEvent event) {
         if(event.getCode().equals(KeyCode.BACK_SPACE) || event.getCode().equals(KeyCode.DELETE)) {
-            userInput.setLength(0);
-        } else if(event.getCode().toString().length() == 6 &&
-                event.getCode().toString().substring(0, 5).equals("DIGIT")) {
-            userInput.append(event.getText().charAt(0));
+            depositWithdrawalInput.setLength(0);
+        } else if (
+                event.getCode().toString().length() == 6 &&
+                event.getCode().toString().substring(0, 5).equals("DIGIT")
+                ||
+                event.getCode().toString().length() == 7 &&
+                event.getCode().toString().substring(0, 6).equals("NUMPAD")) {
+
+            depositWithdrawalInput.append(event.getText().charAt(0));
         }
     }
 
-    private String formatUserInput(NumberFormat formatter) {
-        if(userInput.length() == 0) {
+    private void appendNominalInput(KeyEvent event) {
+        if(event.getCode().equals(KeyCode.BACK_SPACE) || event.getCode().equals(KeyCode.DELETE)) {
+            nominalInput.setLength(0);
+        } else if (
+                (nominalInput.toString().length() < 3 ||
+                nominalInput.toString().charAt(nominalInput.length() - 3) != '.') &&
+                ((event.getCode().toString().length() == 6 &&
+                event.getCode().toString().substring(0, 5).equals("DIGIT"))
+                ||
+                (event.getCode().toString().length() == 7 &&
+                event.getCode().toString().substring(0, 6).equals("NUMPAD"))
+                ||
+                event.getCode().equals(KeyCode.PERIOD))) {
+
+            nominalInput.append(event.getText().charAt(0));
+        }
+    }
+
+    private String formatDepositWithdrawalInput(NumberFormat formatter) {
+        if(depositWithdrawalInput.length() == 0) {
             return formatter.format(0);
         } else {
-            return formatter.format(Double.parseDouble(userInput.toString()) / 100);
+            return formatter.format(Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+        }
+    }
+
+    private String formatNominalInput(NumberFormat formatter) {
+        if(nominalInput.length() == 0) {
+            return formatter.format(0);
+        } else {
+            return formatter.format(Double.parseDouble(nominalInput.toString()));
         }
     }
 
@@ -296,7 +330,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         try {
             account.addPosition(position);
         } catch (BalanceExceededException ex) {
-            Alert alert = new Alert(Alert.AlertType.NONE, "Not enough balance!", ButtonType.OK);
+            Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds!", ButtonType.OK);
             alert.show();
         }
     }

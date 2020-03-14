@@ -55,6 +55,11 @@ public class Account implements PriceObserver {
     }
 
     public void amendBalance(double value) {
+
+        if(balance + value < 0) {
+            throw new BalanceExceededException();
+        }
+
         this.balance += value;
         balanceProperty.setValue(currencyFormatter.format(balance));
     }
@@ -82,5 +87,9 @@ public class Account implements PriceObserver {
         amendMargin(-position.getMargin());
         openPositions.remove(position);
         closedPositions.add(position);
+    }
+
+    public double getBalance() {
+        return balance;
     }
 }
