@@ -1,5 +1,6 @@
 package com.trader;
 
+import com.squareup.okhttp.OkHttpClient;
 import com.trader.price.PriceFeed;
 
 import java.util.Random;
@@ -7,6 +8,10 @@ import java.util.Random;
 public class PriceFeedStub extends PriceFeed {
 
     private double currentPrice = 5000;
+
+    public PriceFeedStub(String url, OkHttpClient httpClient) {
+        super(url, httpClient);
+    }
 
     @Override
     public double nextPrice() {

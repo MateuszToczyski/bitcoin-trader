@@ -18,7 +18,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-
 import java.text.NumberFormat;
 
 public class ApplicationRunner extends Application implements PriceObserver {
@@ -26,10 +25,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty marginProperty = new SimpleStringProperty();
-    private TableView<Position> tableViewPositions;
-    private TextField textFieldNominal;
     private StringBuilder depositWithdrawalInput = new StringBuilder();
     private StringBuilder nominalInput = new StringBuilder();
+    private TableView<Position> tableViewPositions;
+    private TextField textFieldNominal;
 
     private static PriceService priceService;
     private static Account account;
@@ -164,33 +163,57 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         tabPane.getTabs().addAll(tabPositions, tabOrders);
 
-        GridPane bottomGridPane = new GridPane();
-        bottomGridPane.setAlignment(Pos.TOP_LEFT);
-        bottomGridPane.setPadding(new Insets(15));
-        bottomGridPane.setHgap(20);
-        bottomGridPane.setVgap(5);
-        bottomGridPane.setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, Color.LIGHTGRAY, Color.LIGHTGRAY,
-                Color.LIGHTGRAY, BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE,
-                BorderStrokeStyle.NONE, CornerRadii.EMPTY, new BorderWidths(1), Insets.EMPTY)));
+        GridPane bottomLeftGridPane = new GridPane();
+        GridPane bottomRightGridPane = new GridPane();
+
+        GridPane[] bottomGridPanes = {bottomLeftGridPane, bottomRightGridPane};
+
+        for(GridPane gridPane : bottomGridPanes) {
+            gridPane.setPadding(new Insets(15));
+            gridPane.setHgap(20);
+            gridPane.setVgap(5);
+        }
+
+        bottomLeftGridPane.setAlignment(Pos.TOP_LEFT);
+
+        bottomRightGridPane.setAlignment(Pos.TOP_RIGHT);
+        bottomRightGridPane.setMaxWidth(100);
 
         Text textBalanceLabel = new Text("Balance");
-        bottomGridPane.add(textBalanceLabel, 1, 0);
+        bottomLeftGridPane.add(textBalanceLabel, 1, 0);
 
         Text textBalanceAmount = new Text();
         textBalanceAmount.textProperty().bind(account.balanceProperty());
-        bottomGridPane.add(textBalanceAmount, 1, 1);
+        bottomLeftGridPane.add(textBalanceAmount, 1, 1);
 
         Text textMarginLabel = new Text("Margin");
-        bottomGridPane.add(textMarginLabel, 2, 0);
+        bottomLeftGridPane.add(textMarginLabel, 2, 0);
 
         Text textMarginAmount = new Text();
         textMarginAmount.textProperty().bind(account.marginProperty());
-        bottomGridPane.add(textMarginAmount, 2, 1);
+        bottomLeftGridPane.add(textMarginAmount, 2, 1);
 
         Button buttonDepositWithdrawal = new Button("Deposit / Withdrawal");
         buttonDepositWithdrawal.setMinHeight(35);
         buttonDepositWithdrawal.setOnAction(event -> depositWithdrawal());
-        bottomGridPane.add(buttonDepositWithdrawal, 0, 0, 1, 2);
+        bottomLeftGridPane.add(buttonDepositWithdrawal, 0, 0, 1, 2);
+
+        Text textStatus = new Text();
+        textStatus.textProperty().bind(priceService.statusProperty());
+        bottomRightGridPane.add(textStatus, 0, 0);
+
+        GridPane bottomGridPane = new GridPane();
+
+        ColumnConstraints column1 = new ColumnConstraints();
+        column1.setPercentWidth(90);
+
+        ColumnConstraints column2 = new ColumnConstraints();
+        column2.setPercentWidth(10);
+
+        bottomGridPane.getColumnConstraints().addAll(column1, column2);
+
+        bottomGridPane.add(bottomLeftGridPane, 0, 0);
+        bottomGridPane.add(bottomRightGridPane, 1, 0);
 
         VBox vBox = new VBox();
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);

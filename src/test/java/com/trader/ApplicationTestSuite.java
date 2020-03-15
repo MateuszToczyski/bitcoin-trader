@@ -1,5 +1,6 @@
 package com.trader;
 
+import com.squareup.okhttp.OkHttpClient;
 import com.trader.account.*;
 import com.trader.price.*;
 import javafx.collections.*;
@@ -21,8 +22,8 @@ public class ApplicationTestSuite {
         when(dataStorageMock.getBalance()).thenReturn(10000.0);
         doNothing().when(dataStorageMock).storeData();
 
-        PriceFeedStub priceFeedStub = new PriceFeedStub();
-        PriceService priceService = new PriceService(1, priceFeedStub);
+        PriceFeed priceFeed = new PriceFeed("https://www.bitstamp.net/api/v2/ticker/btcusd", new OkHttpClient());
+        PriceService priceService = new PriceService(1, priceFeed);
 
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
