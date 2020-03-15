@@ -103,18 +103,16 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Button buttonSell = new Button("SELL");
         buttonSell.setMinWidth(60);
         buttonSell.setOnAction(event -> {
-            Position position = new Position(Position.Side.SELL, Double.parseDouble(nominalInput.toString()),
-                    priceService.getBidPrice(), marginRequirement);
-            tryAddPosition(position);
+            double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
+            tryAddPosition(Position.Side.SELL, openNominal, priceService.getBidPrice(), marginRequirement);
         });
         upperGridPane.add(buttonSell, 2, 2);
 
         Button buttonBuy = new Button("BUY");
         buttonBuy.setMinWidth(60);
         buttonBuy.setOnAction(event -> {
-            Position position = new Position(Position.Side.BUY, Double.parseDouble(nominalInput.toString()),
-                    priceService.getAskPrice(), marginRequirement);
-            tryAddPosition(position);
+            double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
+            tryAddPosition(Position.Side.BUY, openNominal, priceService.getAskPrice(), marginRequirement);
         });
         upperGridPane.add(buttonBuy, 4, 2);
 
@@ -332,11 +330,15 @@ public class ApplicationRunner extends Application implements PriceObserver {
         };
     }
 
-    private void tryAddPosition(Position position) {
+    private void tryAddPosition(Position.Side side, double nominal, double openPrice, double marginRequirement) {
         try {
+            Position position = new Position(side, nominal, openPrice, marginRequirement);
             account.addPosition(position);
+        } catch(InvalidNominalException ex) {
+            Alert alert = new Alert(Alert.AlertType.NONE, "Nominal has to be greater than 0", ButtonType.OK);
+            alert.show();
         } catch (BalanceExceededException ex) {
-            Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds!", ButtonType.OK);
+            Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds", ButtonType.OK);
             alert.show();
         }
     }

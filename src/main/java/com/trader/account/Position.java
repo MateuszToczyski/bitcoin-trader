@@ -1,5 +1,6 @@
 package com.trader.account;
 
+import com.trader.exceptions.InvalidNominalException;
 import com.trader.price.*;
 import com.trader.utils.*;
 
@@ -26,6 +27,11 @@ public class Position implements PriceObserver {
     private Order takeProfitOrder;
 
     public Position(Side side, double nominal, double openPrice, double marginRequirement) {
+
+        if(nominal <= 0) {
+            throw new InvalidNominalException();
+        }
+
         this.side = side;
         this.nominal = nominal;
         this.openPrice = openPrice;
