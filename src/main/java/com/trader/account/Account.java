@@ -73,6 +73,10 @@ public class Account implements PriceObserver {
         return openPositions;
     }
 
+    public ObservableList<Position> closedPositions() {
+        return closedPositions;
+    }
+
     public void amendBalance(double value) {
 
         if(balance + value < 0) {

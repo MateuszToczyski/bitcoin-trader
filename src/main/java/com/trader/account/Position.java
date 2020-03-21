@@ -35,6 +35,7 @@ public class Position implements PriceObserver {
         id = maxId;
     }
 
+    @Override
     public void update(double bidPrice, double askPrice) {
 
         if(!open) {

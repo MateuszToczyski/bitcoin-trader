@@ -29,7 +29,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private SimpleStringProperty marginProperty = new SimpleStringProperty();
     private StringBuilder depositWithdrawalInput = new StringBuilder();
     private StringBuilder nominalInput = new StringBuilder();
-    private TableView<Position> tableViewPositions;
+    private TableView<Position> tableViewOpenPositions;
+    private TableView<Position> tableViewClosedPositions;
     private TextField textFieldNominal;
 
     private static PriceService priceService;
@@ -95,7 +96,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         bidPriceProperty.setValue(String.valueOf(bidPrice));
         askPriceProperty.setValue(String.valueOf(askPrice));
         updateMarginProperty();
-        Platform.runLater(() -> tableViewPositions.refresh());
+        Platform.runLater(() -> tableViewOpenPositions.refresh());
     }
 
     public static double getMarginRequirement() {
@@ -164,45 +165,78 @@ public class ApplicationRunner extends Application implements PriceObserver {
         tabPane.setMinHeight(300);
 
         Tab tabPositions = new Tab("Positions");
-        tabPositions.closableProperty().setValue(false);
 
-        tableViewPositions = new TableView<>();
+        tableViewOpenPositions = new TableView<>();
 
-        TableColumn<Position, Integer> columnPositionId = new TableColumn<>("ID");
-        columnPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        TableColumn<Position, Integer> colOpenPositionId = new TableColumn<>("ID");
+        colOpenPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
 
-        TableColumn<Position, Side> columnPositionSide = new TableColumn<>("Side");
-        columnPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
+        TableColumn<Position, Side> colOpenPositionSide = new TableColumn<>("Side");
+        colOpenPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
 
-        TableColumn<Position, Integer> columnPositionNominal = new TableColumn<>("Nominal");
-        columnPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
+        TableColumn<Position, Integer> colOpenPositionNominal = new TableColumn<>("Nominal");
+        colOpenPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
 
-        TableColumn<Position, Double> columnPositionOpenPrice = new TableColumn<>("Open price");
-        columnPositionOpenPrice.setCellValueFactory(new PropertyValueFactory<>("openPrice"));
+        TableColumn<Position, Double> colOpenPositionOpenPrice = new TableColumn<>("Open price");
+        colOpenPositionOpenPrice.setCellValueFactory(new PropertyValueFactory<>("openPrice"));
 
-        TableColumn<Position, Double> columnPositionMargin = new TableColumn<>("Margin");
-        columnPositionMargin.setCellValueFactory(new PropertyValueFactory<>("margin"));
+        TableColumn<Position, Double> colOpenPositionMargin = new TableColumn<>("Margin");
+        colOpenPositionMargin.setCellValueFactory(new PropertyValueFactory<>("margin"));
 
-        TableColumn<Position, Double> columnPositionProfit = new TableColumn<>("Profit");
-        columnPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
+        TableColumn<Position, Double> colOpenPositionProfit = new TableColumn<>("Profit");
+        colOpenPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
 
-        TableColumn<Position, String> columnPositionAction = new TableColumn<>("");
-        columnPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-        columnPositionAction.setCellFactory(generateCellFactory());
+        TableColumn<Position, String> colOpenPositionAction = new TableColumn<>("");
+        colOpenPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
+        colOpenPositionAction.setCellFactory(generateCellFactory());
 
-        tableViewPositions.setItems(account.openPositions());
+        tableViewOpenPositions.setItems(account.openPositions());
+
         //noinspection unchecked
-        tableViewPositions.getColumns().addAll(columnPositionId, columnPositionSide, columnPositionNominal,
-                columnPositionOpenPrice, columnPositionMargin, columnPositionProfit, columnPositionAction);
+        tableViewOpenPositions.getColumns().addAll(colOpenPositionId, colOpenPositionSide, colOpenPositionNominal,
+                colOpenPositionOpenPrice, colOpenPositionMargin, colOpenPositionProfit, colOpenPositionAction);
 
-        tableViewPositions.getColumns().forEach(column -> column.setMinWidth(80));
+        tableViewOpenPositions.getColumns().forEach(column -> column.setMinWidth(80));
 
-        tabPositions.setContent(tableViewPositions);
+        tabPositions.setContent(tableViewOpenPositions);
 
         Tab tabOrders = new Tab("Orders");
-        tabOrders.closableProperty().setValue(false);
 
-        tabPane.getTabs().addAll(tabPositions, tabOrders);
+        Tab tabHistory = new Tab("History");
+
+        tableViewClosedPositions = new TableView<>();
+
+        TableColumn<Position, Integer> colClosedPositionId = new TableColumn<>("ID");
+        colClosedPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+        TableColumn<Position, Side> colClosedPositionSide = new TableColumn<>("Side");
+        colClosedPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
+
+        TableColumn<Position, Integer> colClosedPositionNominal = new TableColumn<>("Nominal");
+        colClosedPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
+
+        TableColumn<Position, Double> colClosedPositionOpenPrice = new TableColumn<>("Open price");
+        colClosedPositionOpenPrice.setCellValueFactory(new PropertyValueFactory<>("openPrice"));
+
+        TableColumn<Position, Double> colClosedPositionClosePrice = new TableColumn<>("Close price");
+        colClosedPositionClosePrice.setCellValueFactory(new PropertyValueFactory<>("closePrice"));
+
+        TableColumn<Position, Double> colClosedPositionProfit = new TableColumn<>("Profit");
+        colClosedPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
+
+        tableViewClosedPositions.setItems(account.closedPositions());
+
+        //noinspection unchecked
+        tableViewClosedPositions.getColumns().addAll(colClosedPositionId, colClosedPositionSide,
+                colClosedPositionNominal, colClosedPositionOpenPrice, colClosedPositionClosePrice,
+                colClosedPositionProfit);
+
+        tableViewClosedPositions.getColumns().forEach(column -> column.setMinWidth(80));
+
+        tabHistory.setContent(tableViewClosedPositions);
+
+        tabPane.getTabs().addAll(tabPositions, tabOrders, tabHistory);
+        tabPane.getTabs().forEach(tab -> tab.closableProperty().setValue(false));
 
         GridPane bottomLeftGridPane = new GridPane();
         GridPane bottomRightGridPane = new GridPane();
