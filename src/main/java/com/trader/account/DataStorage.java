@@ -1,10 +1,14 @@
 package com.trader.account;
 
+import com.google.gson.reflect.TypeToken;
 import com.trader.ApplicationRunner;
 import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.file.*;
 import java.util.*;
 import com.google.gson.Gson;
 import com.google.gson.internal.LinkedTreeMap;
+import org.json.*;
 
 public class DataStorage {
 
@@ -14,23 +18,24 @@ public class DataStorage {
         this.path = path;
     }
 
-    @SuppressWarnings("unchecked")
-    public Account retrieveAccount() throws FileNotFoundException, NullPointerException {
+    public Account retrieveAccount() throws IOException, NullPointerException {
+
+        String contents = new String(Files.readAllBytes(Paths.get(path)));
+        JSONObject jsonObject = new JSONObject(contents);
+
+        double balance = Double.parseDouble(jsonObject.get("balance").toString());
+        double margin = Double.parseDouble(jsonObject.get("margin").toString());
 
         Gson gson = new Gson();
-        Map<String, Object> map = gson.fromJson(new FileReader(path), Map.class);
 
-        List<Position> openPositions =
-                positionsFromLinkedTreeMapList((List<LinkedTreeMap<String, Object>>) map.get("openPositions"));
+        Type positionListType = new TypeToken<List<Position>>(){}.getType();
+        Type orderListType = new TypeToken<List<Order>>(){}.getType();
 
-        List<Position> closedPositions =
-                positionsFromLinkedTreeMapList((List<LinkedTreeMap<String, Object>>) map.get("closedPositions"));
+        List<Position> openPositions = gson.fromJson(jsonObject.get("openPositions").toString(), positionListType);
+        List<Position> closedPositions = gson.fromJson(jsonObject.get("closedPositions").toString(), positionListType);
+        List<Order> orders = gson.fromJson(jsonObject.get("orders").toString(), orderListType);
 
-        List<Order> orders =
-                ordersFromLinkedTreeMapList((List<LinkedTreeMap<String, Object>>) map.get("orders"));
-
-        return new Account((double)map.get("balance"), (double)map.get("margin"),
-                openPositions, closedPositions, orders);
+        return new Account(balance, margin, openPositions, closedPositions, orders);
     }
 
     public void storeAccount(Account account) throws FileNotFoundException {
