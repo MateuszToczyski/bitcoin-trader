@@ -7,7 +7,12 @@ import com.trader.utils.*;
 import java.io.FileNotFoundException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Currency;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -62,6 +67,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
             return;
         }
 
+        Position.setMaxId(findMaxPositionId());
+
         currencyFormatter = NumberFormat.getCurrencyInstance();
         currencyFormatter.setCurrency(Currency.getInstance("USD"));
         currencyFormatter.setMinimumFractionDigits(2);
@@ -97,10 +104,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
         askPriceProperty.setValue(String.valueOf(askPrice));
         updateMarginProperty();
         Platform.runLater(() -> tableViewOpenPositions.refresh());
-    }
-
-    public static double getMarginRequirement() {
-        return marginRequirement;
     }
 
     private void confirmCreateNewAccount() {
@@ -267,6 +270,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Text textMarginAmount = new Text();
         textMarginAmount.textProperty().bind(account.marginProperty());
         bottomLeftGridPane.add(textMarginAmount, 2, 1);
+
+        Text textProfitLabel = new Text("Total profit");
+        bottomLeftGridPane.add(textProfitLabel, 3, 0);
+
+        Text textProfitAmount = new Text();
+        textProfitAmount.textProperty().bind(account.openProfitProperty());
+        bottomLeftGridPane.add(textProfitAmount, 3, 1);
 
         Button buttonDepositWithdrawal = new Button("Deposit / Withdrawal");
         buttonDepositWithdrawal.setMinHeight(35);
@@ -451,5 +461,17 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
 
         marginProperty.setValue("Margin:\n" + priceFormatter.format(MathOperations.round(margin, 2)));
+    }
+
+    private int findMaxPositionId() {
+
+        List<Position> positions = Stream
+                .concat(account.openPositions().stream(), account.closedPositions().stream())
+                .collect(Collectors.toList());
+
+        return positions.stream()
+                .map(Position::getId)
+                .max(Comparator.comparing(id -> id))
+                .orElse(0);
     }
 }

@@ -13,11 +13,13 @@ public class Account implements PriceObserver {
 
     private double balance;
     private double margin;
+    private double openProfit;
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
     private transient SimpleStringProperty balanceProperty;
     private transient SimpleStringProperty marginProperty;
+    private transient SimpleStringProperty openProfitProperty;
     private transient NumberFormat currencyFormatter;
 
     public Account(double balance, double margin, List<Position> openPositions,
@@ -30,6 +32,7 @@ public class Account implements PriceObserver {
             this.openPositions = FXCollections.observableArrayList();
         } else {
             this.openPositions = FXCollections.observableArrayList(openPositions);
+            openPositions.forEach(position -> openProfit += position.getProfit());
         }
 
         if(closedPositions == null) {
@@ -51,11 +54,13 @@ public class Account implements PriceObserver {
 
         balanceProperty = new SimpleStringProperty(currencyFormatter.format(balance));
         marginProperty = new SimpleStringProperty(currencyFormatter.format(margin));
+        openProfitProperty = new SimpleStringProperty(currencyFormatter.format(openProfit));
     }
 
     @Override
     public void update(double bidPrice, double askPrice) {
         openPositions.forEach(position -> position.update(bidPrice, askPrice));
+        updateProfit();
     }
 
     public void addPosition(Position position) {
@@ -67,6 +72,7 @@ public class Account implements PriceObserver {
         amendBalance(-position.getMargin());
         amendMargin(position.getMargin());
         openPositions.add(position);
+        updateProfit();
     }
 
     public ObservableList<Position> openPositions() {
@@ -100,15 +106,26 @@ public class Account implements PriceObserver {
         return marginProperty;
     }
 
+    public SimpleStringProperty openProfitProperty() {
+        return openProfitProperty;
+    }
+
     public void closePosition(Position position) {
         position.close();
         amendBalance(position.getProfit() + position.getMargin());
         amendMargin(-position.getMargin());
         openPositions.remove(position);
         closedPositions.add(position);
+        updateProfit();
     }
 
     public double getBalance() {
         return balance;
+    }
+
+    private void updateProfit() {
+        openProfit = 0;
+        openPositions.forEach(position -> openProfit += position.getProfit());
+        openProfitProperty.setValue(currencyFormatter.format(openProfit));
     }
 }
