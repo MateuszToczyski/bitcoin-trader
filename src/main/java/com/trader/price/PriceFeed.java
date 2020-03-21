@@ -2,7 +2,6 @@ package com.trader.price;
 
 import com.squareup.okhttp.*;
 import org.json.JSONObject;
-
 import java.io.IOException;
 import java.time.LocalTime;
 
@@ -32,11 +31,11 @@ public class PriceFeed {
             currentPrice = getPriceFromProvider();
             status = Status.OK;
             lastSuccessTime = LocalTime.now();
-            return currentPrice;
         } catch(Exception ex) {
             status = Status.ERROR;
-            return currentPrice;
         }
+
+        return currentPrice;
     }
 
     public Status getStatus() {

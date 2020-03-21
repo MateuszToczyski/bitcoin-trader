@@ -3,17 +3,11 @@ package com.trader.account;
 import com.trader.exceptions.InvalidNominalException;
 import com.trader.price.*;
 import com.trader.utils.*;
-
 import java.util.Objects;
 
 public class Position implements PriceObserver {
 
-    public enum Side {
-        BUY,
-        SELL
-    }
-
-    private static int idMax;
+    private static int maxId;
 
     private int id;
     private boolean open = true;
@@ -23,8 +17,8 @@ public class Position implements PriceObserver {
     private double margin;
     private double closePrice;
     private double profit;
-    private Order stopLossOrder;
-    private Order takeProfitOrder;
+    private double stopLoss;
+    private double takeProfit;
 
     public Position(Side side, double nominal, double openPrice, double marginRequirement) {
 
@@ -37,8 +31,8 @@ public class Position implements PriceObserver {
         this.openPrice = openPrice;
         this.margin = MathOperations.round(marginRequirement * nominal * openPrice, 2);
 
-        idMax++;
-        id = idMax;
+        maxId++;
+        id = maxId;
     }
 
     public void update(double bidPrice, double askPrice) {
@@ -90,6 +84,10 @@ public class Position implements PriceObserver {
 
     public double getMargin() {
         return margin;
+    }
+
+    public static void setMaxId(int value) {
+        Position.maxId = value;
     }
 
     @Override

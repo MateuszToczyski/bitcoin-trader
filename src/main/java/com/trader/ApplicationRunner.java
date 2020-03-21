@@ -4,6 +4,10 @@ import com.trader.account.*;
 import com.trader.exceptions.*;
 import com.trader.price.*;
 import com.trader.utils.*;
+import java.io.FileNotFoundException;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Currency;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -14,11 +18,9 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import java.text.NumberFormat;
 
 public class ApplicationRunner extends Application implements PriceObserver {
 
@@ -31,23 +33,42 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private TextField textFieldNominal;
 
     private static PriceService priceService;
+    private static DataStorage dataStorage;
     private static Account account;
     private static NumberFormat currencyFormatter;
     private static NumberFormat priceFormatter;
     private static double marginRequirement;
 
-    public void run(PriceService priceService, Account account, NumberFormat currencyFormatter,
-                    NumberFormat priceFormatter, double marginRequirement) {
+    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement) {
+
         ApplicationRunner.priceService = priceService;
-        ApplicationRunner.account = account;
-        ApplicationRunner.currencyFormatter = currencyFormatter;
-        ApplicationRunner.priceFormatter = priceFormatter;
+        ApplicationRunner.dataStorage = dataStorage;
         ApplicationRunner.marginRequirement = marginRequirement;
+
         launch();
     }
 
     @Override
     public void start(Stage primaryStage) {
+
+        try {
+            ApplicationRunner.account = dataStorage.retrieveAccount();
+        } catch(Exception ex) {
+            confirmCreateNewAccount();
+        }
+
+        if(account == null) {
+            return;
+        }
+
+        currencyFormatter = NumberFormat.getCurrencyInstance();
+        currencyFormatter.setCurrency(Currency.getInstance("USD"));
+        currencyFormatter.setMinimumFractionDigits(2);
+        currencyFormatter.setGroupingUsed(true);
+
+        priceFormatter = NumberFormat.getNumberInstance();
+        priceFormatter.setMinimumFractionDigits(2);
+        priceFormatter.setGroupingUsed(true);
 
         priceService.addObserver(this);
         priceService.addObserver(account);
@@ -60,9 +81,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
     }
 
     @Override
-    public void stop() {
+    public void stop() throws FileNotFoundException {
+
         priceService.stop();
-        account.storeData();
+
+        if(account != null) {
+            dataStorage.storeAccount(account);
+        }
     }
 
     @Override
@@ -71,6 +96,22 @@ public class ApplicationRunner extends Application implements PriceObserver {
         askPriceProperty.setValue(String.valueOf(askPrice));
         updateMarginProperty();
         Platform.runLater(() -> tableViewPositions.refresh());
+    }
+
+    public static double getMarginRequirement() {
+        return marginRequirement;
+    }
+
+    private void confirmCreateNewAccount() {
+
+        Alert alert = new Alert(Alert.AlertType.NONE, "Create a new account?",
+                ButtonType.YES, ButtonType.NO);
+
+        alert.showAndWait();
+
+        if (alert.getResult() == ButtonType.YES) {
+            account = new Account(10000, 0, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        }
     }
 
     private Scene generateScene() {
@@ -103,7 +144,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         buttonSell.setMinWidth(60);
         buttonSell.setOnAction(event -> {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
-            tryAddPosition(Position.Side.SELL, openNominal, priceService.getBidPrice(), marginRequirement);
+            tryAddPosition(Side.SELL, openNominal, priceService.getBidPrice(), marginRequirement);
         });
         upperGridPane.add(buttonSell, 2, 2);
 
@@ -111,7 +152,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         buttonBuy.setMinWidth(60);
         buttonBuy.setOnAction(event -> {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
-            tryAddPosition(Position.Side.BUY, openNominal, priceService.getAskPrice(), marginRequirement);
+            tryAddPosition(Side.BUY, openNominal, priceService.getAskPrice(), marginRequirement);
         });
         upperGridPane.add(buttonBuy, 4, 2);
 
@@ -130,7 +171,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Integer> columnPositionId = new TableColumn<>("ID");
         columnPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
 
-        TableColumn<Position, Position.Side> columnPositionSide = new TableColumn<>("Side");
+        TableColumn<Position, Side> columnPositionSide = new TableColumn<>("Side");
         columnPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
 
         TableColumn<Position, Integer> columnPositionNominal = new TableColumn<>("Nominal");
@@ -353,7 +394,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         };
     }
 
-    private void tryAddPosition(Position.Side side, double nominal, double openPrice, double marginRequirement) {
+    private void tryAddPosition(Side side, double nominal, double openPrice, double marginRequirement) {
         try {
             Position position = new Position(side, nominal, openPrice, marginRequirement);
             account.addPosition(position);
