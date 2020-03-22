@@ -5,6 +5,7 @@ import com.trader.exceptions.*;
 import com.trader.price.*;
 import com.trader.utils.*;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,6 +27,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.json.JSONException;
 
 public class ApplicationRunner extends Application implements PriceObserver {
 
@@ -35,7 +37,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private StringBuilder depositWithdrawalInput = new StringBuilder();
     private StringBuilder nominalInput = new StringBuilder();
     private TableView<Position> tableViewOpenPositions;
-    private TableView<Position> tableViewClosedPositions;
     private TextField textFieldNominal;
 
     private static PriceService priceService;
@@ -59,7 +60,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         try {
             ApplicationRunner.account = dataStorage.retrieveAccount();
-        } catch(Exception ex) {
+        } catch(IOException | JSONException ex) {
+            ex.printStackTrace();
             confirmCreateNewAccount();
         }
 
@@ -207,7 +209,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Tab tabHistory = new Tab("History");
 
-        tableViewClosedPositions = new TableView<>();
+        TableView<Position> tableViewClosedPositions = new TableView<>();
 
         TableColumn<Position, Integer> colClosedPositionId = new TableColumn<>("ID");
         colClosedPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));

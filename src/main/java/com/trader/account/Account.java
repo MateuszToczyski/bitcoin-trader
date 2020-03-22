@@ -5,6 +5,8 @@ import com.trader.exceptions.*;
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.List;
+
+import com.trader.utils.MathOperations;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -85,16 +87,16 @@ public class Account implements PriceObserver {
 
     public void amendBalance(double value) {
 
-        if(balance + value < 0) {
+        if(balance + MathOperations.round(value, 2) < 0) {
             throw new BalanceExceededException();
         }
 
-        this.balance += value;
+        this.balance += MathOperations.round(value, 2);
         balanceProperty.setValue(currencyFormatter.format(balance));
     }
 
     public void amendMargin(double value) {
-        this.margin += value;
+        this.margin += MathOperations.round(value, 2);
         marginProperty.setValue(currencyFormatter.format(margin));
     }
 

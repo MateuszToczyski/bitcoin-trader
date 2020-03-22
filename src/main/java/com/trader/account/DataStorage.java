@@ -20,7 +20,7 @@ public class DataStorage {
         this.path = path;
     }
 
-    public Account retrieveAccount() throws IOException, NullPointerException {
+    public Account retrieveAccount() throws IOException {
 
         String contents = new String(Files.readAllBytes(Paths.get(path)));
         JSONObject jsonObject = new JSONObject(contents);
