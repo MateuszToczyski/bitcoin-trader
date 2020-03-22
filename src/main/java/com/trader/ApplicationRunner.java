@@ -63,15 +63,12 @@ public class ApplicationRunner extends Application implements PriceObserver {
         try {
             ApplicationRunner.account = dataStorage.retrieveAccount();
         } catch(IOException | JSONException ex) {
-            ex.printStackTrace();
             confirmCreateNewAccount();
         }
 
         if(account == null) {
             return;
         }
-
-        Position.setMaxId(findMaxPositionId());
 
         currencyFormatter = NumberFormat.getCurrencyInstance();
         currencyFormatter.setCurrency(Currency.getInstance("USD"));
@@ -108,6 +105,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
         askPriceProperty.setValue(String.valueOf(askPrice));
         updateMarginProperty();
         Platform.runLater(() -> tableViewOpenPositions.refresh());
+    }
+
+    public static double getStopOutLevel() {
+        return stopOutLevel;
     }
 
     private void confirmCreateNewAccount() {
@@ -472,17 +473,5 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
 
         marginProperty.setValue("Margin:\n" + priceFormatter.format(MathOperations.round(margin, 2)));
-    }
-
-    private int findMaxPositionId() {
-
-        List<Position> positions = Stream
-                .concat(account.openPositions().stream(), account.closedPositions().stream())
-                .collect(Collectors.toList());
-
-        return positions.stream()
-                .map(Position::getId)
-                .max(Comparator.comparing(id -> id))
-                .orElse(0);
     }
 }

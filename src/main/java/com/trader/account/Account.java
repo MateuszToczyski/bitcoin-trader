@@ -1,10 +1,14 @@
 package com.trader.account;
 
+import com.trader.ApplicationRunner;
 import com.trader.price.*;
 import com.trader.exceptions.*;
 import java.text.NumberFormat;
+import java.util.Comparator;
 import java.util.Currency;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.trader.utils.MathOperations;
 import javafx.beans.property.SimpleStringProperty;
@@ -64,6 +68,8 @@ public class Account implements PriceObserver {
         openProfitProperty = new SimpleStringProperty();
         marginLevelProperty = new SimpleStringProperty();
 
+        Position.setMaxId(findMaxPositionId());
+
         updateProfitAndMarginLevel();
     }
 
@@ -99,12 +105,23 @@ public class Account implements PriceObserver {
             throw new BalanceExceededException();
         }
 
-        this.balance += MathOperations.round(value, 2);
+        balance += MathOperations.round(value, 2);
+
+        if(Math.abs(balance) < 0.001) {
+            balance = 0;
+        }
+
         balanceProperty.setValue(currencyFormatter.format(balance));
     }
 
     public void amendMargin(double value) {
-        this.margin += MathOperations.round(value, 2);
+
+        margin += MathOperations.round(value, 2);
+
+        if(Math.abs(margin) < 0.001) {
+            margin = 0;
+        }
+
         marginProperty.setValue(currencyFormatter.format(margin));
     }
 
@@ -143,11 +160,38 @@ public class Account implements PriceObserver {
         openPositions.forEach(position -> openProfit += position.getProfit());
         openProfitProperty.setValue(currencyFormatter.format(openProfit));
 
-        if(Math.abs(margin) > 0.01) {
+        if(Math.abs(margin) > 0.001) {
             marginLevel = (balance + margin + openProfit) / margin;
         } else {
             marginLevel = 0;
         }
-        marginLevelProperty.setValue(percentageFormatter.format(marginLevel));
+
+        if(marginLevel != 0) {
+            marginLevelProperty.setValue(percentageFormatter.format(marginLevel));
+            if(marginLevel < ApplicationRunner.getStopOutLevel()) {
+                executeStopOut();
+                updateProfitAndMarginLevel();
+            }
+        } else {
+            marginLevelProperty.setValue("-");
+        }
+    }
+
+    private int findMaxPositionId() {
+
+        List<Position> positions = Stream
+                .concat(openPositions.stream(), closedPositions.stream())
+                .collect(Collectors.toList());
+
+        return positions.stream()
+                .map(Position::getId)
+                .max(Comparator.comparing(id -> id))
+                .orElse(0);
+    }
+
+    private void executeStopOut() {
+        openPositions.stream()
+                .min(Comparator.comparing(Position::getProfit))
+                .ifPresent(this::closePosition);
     }
 }
