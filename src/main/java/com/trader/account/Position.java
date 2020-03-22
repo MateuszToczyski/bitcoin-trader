@@ -1,6 +1,7 @@
 package com.trader.account;
 
 import com.trader.exceptions.InvalidNominalException;
+import com.trader.exceptions.WrongSideException;
 import com.trader.price.*;
 import com.trader.utils.*;
 import java.util.Objects;
@@ -17,8 +18,10 @@ public class Position implements PriceObserver {
     private double margin;
     private double closePrice;
     private double profit;
-    private double stopLoss;
-    private double takeProfit;
+    private Double stopLoss;
+    private Double takeProfit;
+    private boolean stopLossActivated;
+    private boolean takeProfitActivated;
 
     public Position(Side side, double nominal, double openPrice, double marginRequirement) {
 
@@ -49,6 +52,9 @@ public class Position implements PriceObserver {
             closePrice = askPrice;
             profit = MathOperations.round(nominal * (openPrice - closePrice), 2);
         }
+
+        checkIfActivateStopLoss();
+        checkIfActivateTakeProfit();
     }
 
     public void close() {
@@ -87,8 +93,54 @@ public class Position implements PriceObserver {
         return margin;
     }
 
+    public Double getStopLoss() {
+        return stopLoss;
+    }
+
+    public Double getTakeProfit() {
+        return takeProfit;
+    }
+
+    public boolean isStopLossActivated() {
+        return stopLossActivated;
+    }
+
+    public boolean isTakeProfitActivated() {
+        return takeProfitActivated;
+    }
+
     public static void setMaxId(int value) {
         Position.maxId = value;
+    }
+
+    public void setStopLoss(Double stopLoss) {
+
+        if(stopLoss == null) {
+            this.stopLoss = null;
+            return;
+        }
+
+        if(side.equals(Side.BUY) && stopLoss >= closePrice ||
+                side.equals(Side.SELL) && stopLoss <= closePrice) {
+            throw new WrongSideException();
+        }
+
+        this.stopLoss = stopLoss;
+    }
+
+    public void setTakeProfit(Double takeProfit) {
+
+        if(takeProfit == null) {
+            this.takeProfit = null;
+            return;
+        }
+
+        if(side.equals(Side.BUY) && takeProfit <= closePrice ||
+                side.equals(Side.SELL) && takeProfit >= closePrice) {
+            throw new WrongSideException();
+        }
+
+        this.takeProfit = takeProfit;
     }
 
     @Override
@@ -102,5 +154,29 @@ public class Position implements PriceObserver {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    private void checkIfActivateStopLoss() {
+
+        if(stopLoss == null) {
+            return;
+        }
+
+        if (side.equals(Side.BUY) && closePrice <= stopLoss ||
+                side.equals(Side.SELL) && closePrice >= stopLoss) {
+            stopLossActivated = true;
+        }
+    }
+
+    private void checkIfActivateTakeProfit() {
+
+        if(takeProfit == null) {
+            return;
+        }
+
+        if (side.equals(Side.BUY) && closePrice >= takeProfit ||
+                side.equals(Side.SELL) && closePrice <= takeProfit) {
+            takeProfitActivated = true;
+        }
     }
 }

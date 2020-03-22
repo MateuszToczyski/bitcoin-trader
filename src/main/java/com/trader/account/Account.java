@@ -75,7 +75,16 @@ public class Account implements PriceObserver {
 
     @Override
     public void update(double bidPrice, double askPrice) {
-        openPositions.forEach(position -> position.update(bidPrice, askPrice));
+
+        openPositions.forEach(position -> {
+
+            position.update(bidPrice, askPrice);
+
+            if(position.isStopLossActivated() || position.isTakeProfitActivated()) {
+                closePosition(position);
+            }
+        });
+
         updateProfitAndMarginLevel();
     }
 

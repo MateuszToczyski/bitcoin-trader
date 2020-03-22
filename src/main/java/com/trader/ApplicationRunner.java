@@ -8,11 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Currency;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -194,17 +190,34 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Double> colOpenPositionProfit = new TableColumn<>("Profit");
         colOpenPositionProfit.setCellValueFactory(new PropertyValueFactory<>("profit"));
 
-        TableColumn<Position, String> colOpenPositionAction = new TableColumn<>("");
-        colOpenPositionAction.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-        colOpenPositionAction.setCellFactory(generateCellFactory());
+        TableColumn<Position, Double> colOpenPositionStopLoss = new TableColumn<>("Stop loss");
+        colOpenPositionStopLoss.setCellValueFactory(new PropertyValueFactory<>("stopLoss"));
+
+        TableColumn<Position, Double> colOpenPositionTakeProfit= new TableColumn<>("Take profit");
+        colOpenPositionTakeProfit.setCellValueFactory(new PropertyValueFactory<>("takeProfit"));
+
+        TableColumn<Position, String> colOpenPositionClose = new TableColumn<>("");
+        colOpenPositionClose.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
+        colOpenPositionClose.setCellFactory(generateCloseCellFactory());
+
+        TableColumn<Position, String> colOpenPositionModify = new TableColumn<>("");
+        colOpenPositionModify.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
+        colOpenPositionModify.setCellFactory(generateModifyCellFactory());
 
         tableViewOpenPositions.setItems(account.openPositions());
 
         //noinspection unchecked
         tableViewOpenPositions.getColumns().addAll(colOpenPositionId, colOpenPositionSide, colOpenPositionNominal,
-                colOpenPositionOpenPrice, colOpenPositionMargin, colOpenPositionProfit, colOpenPositionAction);
+                colOpenPositionOpenPrice, colOpenPositionMargin, colOpenPositionProfit, colOpenPositionStopLoss,
+                colOpenPositionTakeProfit, colOpenPositionClose, colOpenPositionModify);
 
         tableViewOpenPositions.getColumns().forEach(column -> column.setMinWidth(80));
+
+        colOpenPositionClose.setMinWidth(45);
+        colOpenPositionClose.setPrefWidth(45);
+
+        colOpenPositionModify.setMinWidth(60);
+        colOpenPositionModify.setPrefWidth(60);
 
         tabPositions.setContent(tableViewOpenPositions);
 
@@ -417,12 +430,12 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
     }
 
-    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateCellFactory() {
+    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateCloseCellFactory() {
         return new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
             @Override
             public TableCell<Position, String> call(final TableColumn<Position, String> param) {
 
-                Button closeButton = new Button("X");
+                Button closeButton = new Button("close");
                 closeButton.setPadding(new Insets(0, 4, 0, 4));
 
                 return new TableCell<Position, String>() {
@@ -440,6 +453,39 @@ public class ApplicationRunner extends Application implements PriceObserver {
                                 account.closePosition(position);
                             });
                             setGraphic(closeButton);
+                        }
+
+                        setText(null);
+                        setPadding(new Insets(3));
+                    }
+                };
+            }
+        };
+    }
+
+    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateModifyCellFactory() {
+        return new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
+            @Override
+            public TableCell<Position, String> call(final TableColumn<Position, String> param) {
+
+                Button modifyButton = new Button("modify");
+                modifyButton.setPadding(new Insets(0, 4, 0, 4));
+
+                return new TableCell<Position, String>() {
+
+                    @Override
+                    public void updateItem(String item, boolean empty) {
+
+                        super.updateItem(item, empty);
+
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            modifyButton.setOnAction(event -> {
+                                Position position = getTableView().getItems().get(getIndex());
+                                modifyPosition(position);
+                            });
+                            setGraphic(modifyButton);
                         }
 
                         setText(null);
@@ -473,5 +519,68 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
 
         marginProperty.setValue("Margin:\n" + priceFormatter.format(MathOperations.round(margin, 2)));
+    }
+
+    private void modifyPosition(Position position) {
+
+        Stage stage = new Stage();
+        stage.setWidth(205);
+        stage.setHeight(160);
+
+        GridPane gridPane = new GridPane();
+        gridPane.setAlignment(Pos.TOP_CENTER);
+        gridPane.setPadding(new Insets(15));
+        gridPane.setVgap(10);
+        gridPane.setHgap(10);
+
+        Text txtStopLoss = new Text("Stop loss");
+        gridPane.add(txtStopLoss, 0, 0);
+
+        String stopLoss = position.getStopLoss() == null ? "" : position.getStopLoss().toString();
+        TextField txtFieldStopLoss = new TextField(stopLoss);
+        gridPane.add(txtFieldStopLoss, 1, 0);
+
+        Text txtTakeProfit = new Text("Take profit");
+        gridPane.add(txtTakeProfit, 0, 1);
+
+        String takeProfit = position.getTakeProfit() == null ? "" : position.getTakeProfit().toString();
+        TextField txtFieldTakeProfit = new TextField(takeProfit);
+        gridPane.add(txtFieldTakeProfit, 1, 1);
+
+        Button btnApply = new Button("Apply");
+        btnApply.setMinWidth(70);
+        btnApply.setOnAction(event -> {
+
+            try {
+                tryModifyPosition(position, txtFieldStopLoss.getText(), txtFieldTakeProfit.getText());
+                stage.close();
+            } catch(NumberFormatException ex) {
+                Alert alert = new Alert(Alert.AlertType.NONE, "Invalid value(s)", ButtonType.OK);
+                alert.show();
+            } catch(WrongSideException ex) {
+                Alert alert = new Alert(Alert.AlertType.NONE, "Wrong side of the market", ButtonType.OK);
+                alert.show();
+            }
+        });
+        gridPane.add(btnApply, 0, 2);
+
+        Scene scene = new Scene(gridPane);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private void tryModifyPosition(Position position, String stopLoss, String takeProfit) {
+
+        if(stopLoss.equals("")) {
+            position.setStopLoss(null);
+        } else {
+            position.setStopLoss(Double.parseDouble(stopLoss));
+        }
+
+        if(takeProfit.equals("")) {
+            position.setTakeProfit(null);
+        } else {
+            position.setTakeProfit(Double.parseDouble(takeProfit));
+        }
     }
 }
