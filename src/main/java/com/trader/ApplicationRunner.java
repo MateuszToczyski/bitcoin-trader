@@ -39,18 +39,20 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private TableView<Position> tableViewOpenPositions;
     private TextField textFieldNominal;
 
+    private static double marginRequirement;
+    private static double stopOutLevel;
     private static PriceService priceService;
     private static DataStorage dataStorage;
     private static Account account;
     private static NumberFormat currencyFormatter;
     private static NumberFormat priceFormatter;
-    private static double marginRequirement;
 
-    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement) {
+    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement, double stopOutLevel) {
 
         ApplicationRunner.priceService = priceService;
         ApplicationRunner.dataStorage = dataStorage;
         ApplicationRunner.marginRequirement = marginRequirement;
+        ApplicationRunner.stopOutLevel = stopOutLevel;
 
         launch();
     }
@@ -279,6 +281,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Text textProfitAmount = new Text();
         textProfitAmount.textProperty().bind(account.openProfitProperty());
         bottomLeftGridPane.add(textProfitAmount, 3, 1);
+
+        Text textMarginLevelLabel = new Text("Margin level");
+        bottomLeftGridPane.add(textMarginLevelLabel, 4, 0);
+
+        Text textMarginLevelAmount = new Text();
+        textMarginLevelAmount.textProperty().bind(account.marginLevelProperty());
+        bottomLeftGridPane.add(textMarginLevelAmount, 4, 1);
 
         Button buttonDepositWithdrawal = new Button("Deposit / Withdrawal");
         buttonDepositWithdrawal.setMinHeight(35);

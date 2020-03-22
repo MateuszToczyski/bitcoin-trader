@@ -16,13 +16,16 @@ public class Account implements PriceObserver {
     private double balance;
     private double margin;
     private double openProfit;
+    private double marginLevel;
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
+    private transient NumberFormat currencyFormatter;
+    private transient NumberFormat percentageFormatter;
     private transient SimpleStringProperty balanceProperty;
     private transient SimpleStringProperty marginProperty;
     private transient SimpleStringProperty openProfitProperty;
-    private transient NumberFormat currencyFormatter;
+    private transient SimpleStringProperty marginLevelProperty;
 
     public Account(double balance, double margin, List<Position> openPositions,
                    List<Position> closedPositions, List<Order> orders) {
@@ -34,7 +37,6 @@ public class Account implements PriceObserver {
             this.openPositions = FXCollections.observableArrayList();
         } else {
             this.openPositions = FXCollections.observableArrayList(openPositions);
-            openPositions.forEach(position -> openProfit += position.getProfit());
         }
 
         if(closedPositions == null) {
@@ -54,15 +56,21 @@ public class Account implements PriceObserver {
         currencyFormatter.setMinimumFractionDigits(2);
         currencyFormatter.setGroupingUsed(true);
 
+        percentageFormatter = NumberFormat.getPercentInstance();
+        percentageFormatter.setMinimumFractionDigits(2);
+
         balanceProperty = new SimpleStringProperty(currencyFormatter.format(balance));
         marginProperty = new SimpleStringProperty(currencyFormatter.format(margin));
-        openProfitProperty = new SimpleStringProperty(currencyFormatter.format(openProfit));
+        openProfitProperty = new SimpleStringProperty();
+        marginLevelProperty = new SimpleStringProperty();
+
+        updateProfitAndMarginLevel();
     }
 
     @Override
     public void update(double bidPrice, double askPrice) {
         openPositions.forEach(position -> position.update(bidPrice, askPrice));
-        updateProfit();
+        updateProfitAndMarginLevel();
     }
 
     public void addPosition(Position position) {
@@ -74,7 +82,7 @@ public class Account implements PriceObserver {
         amendBalance(-position.getMargin());
         amendMargin(position.getMargin());
         openPositions.add(position);
-        updateProfit();
+        updateProfitAndMarginLevel();
     }
 
     public ObservableList<Position> openPositions() {
@@ -112,22 +120,34 @@ public class Account implements PriceObserver {
         return openProfitProperty;
     }
 
+    public SimpleStringProperty marginLevelProperty() {
+        return marginLevelProperty;
+    }
+
     public void closePosition(Position position) {
         position.close();
         amendBalance(position.getProfit() + position.getMargin());
         amendMargin(-position.getMargin());
         openPositions.remove(position);
         closedPositions.add(position);
-        updateProfit();
+        updateProfitAndMarginLevel();
     }
 
     public double getBalance() {
         return balance;
     }
 
-    private void updateProfit() {
+    private void updateProfitAndMarginLevel() {
+
         openProfit = 0;
         openPositions.forEach(position -> openProfit += position.getProfit());
         openProfitProperty.setValue(currencyFormatter.format(openProfit));
+
+        if(Math.abs(margin) > 0.01) {
+            marginLevel = (balance + margin + openProfit) / margin;
+        } else {
+            marginLevel = 0;
+        }
+        marginLevelProperty.setValue(percentageFormatter.format(marginLevel));
     }
 }

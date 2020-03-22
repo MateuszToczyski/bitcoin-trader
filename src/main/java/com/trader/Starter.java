@@ -14,7 +14,7 @@ public class Starter {
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
         try {
-            applicationRunner.run(priceService, dataStorage, 0.05);
+            applicationRunner.run(priceService, dataStorage, 0.05, 0.3);
         } catch(Exception ex) {
             ex.printStackTrace();
         }
