@@ -25,3 +25,6 @@ out/
 
 ## OS X
 .DS_Store
+
+##Project specific
+Account.json
