@@ -94,6 +94,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
         return stopOutLevel;
     }
 
+    public static double getMarginRequirement() {
+        return marginRequirement;
+    }
+
     private void confirmCreateNewAccount() {
 
         Alert alert = new Alert(Alert.AlertType.NONE, "Create a new account?",
@@ -136,7 +140,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         buttonSell.setMinWidth(60);
         buttonSell.setOnAction(event -> {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
-            tryAddPosition(Side.SELL, openNominal, priceService.getBidPrice(), marginRequirement);
+            tryAddPosition(Side.SELL, openNominal);
         });
         upperGridPane.add(buttonSell, 2, 2);
 
@@ -144,7 +148,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         buttonBuy.setMinWidth(60);
         buttonBuy.setOnAction(event -> {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
-            tryAddPosition(Side.BUY, openNominal, priceService.getAskPrice(), marginRequirement);
+            tryAddPosition(Side.BUY, openNominal);
         });
         upperGridPane.add(buttonBuy, 4, 2);
 
@@ -483,10 +487,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
         };
     }
 
-    private void tryAddPosition(Side side, double nominal, double openPrice, double marginRequirement) {
+    private void tryAddPosition(Side side, double nominal) {
         try {
-            Position position = new Position(side, nominal, openPrice, marginRequirement);
-            account.addPosition(position);
+            account.addPosition(side, nominal);
         } catch(InvalidNominalException ex) {
             Alert alert = new Alert(Alert.AlertType.NONE, "Nominal has to be greater than 0", ButtonType.OK);
             alert.show();

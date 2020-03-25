@@ -21,6 +21,8 @@ public class Account implements PriceObserver {
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
+    private transient double currentBid;
+    private transient double currentAsk;
     private transient SimpleStringProperty balanceProperty;
     private transient SimpleStringProperty marginProperty;
     private transient SimpleStringProperty openProfitProperty;
@@ -61,11 +63,14 @@ public class Account implements PriceObserver {
     }
 
     @Override
-    public void update(double bidPrice, double askPrice) {
+    public void update(double bid, double ask) {
+
+        currentBid = bid;
+        currentAsk = ask;
 
         openPositions.forEach(position -> {
 
-            position.update(bidPrice, askPrice);
+            position.update(currentBid, currentAsk);
 
             if(position.isStopLossActivated() || position.isTakeProfitActivated()) {
                 closePosition(position);
@@ -75,7 +80,17 @@ public class Account implements PriceObserver {
         updateProfitAndMarginLevel();
     }
 
-    public void addPosition(Position position) {
+    public void addPosition(Side side, double nominal) {
+
+        double openPrice;
+
+        if(side.equals(Side.BUY)) {
+            openPrice = currentAsk;
+        } else {
+            openPrice = currentBid;
+        }
+
+        Position position = new Position(side, nominal, openPrice, ApplicationRunner.getMarginRequirement());
 
         if(position.getMargin() > balance) {
             throw new BalanceExceededException();
@@ -148,6 +163,14 @@ public class Account implements PriceObserver {
 
     public double getBalance() {
         return balance;
+    }
+
+    public double getCurrentBid() {
+        return currentBid;
+    }
+
+    public double getCurrentAsk() {
+        return currentAsk;
     }
 
     private void updateProfitAndMarginLevel() {

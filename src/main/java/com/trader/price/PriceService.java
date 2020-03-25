@@ -1,16 +1,13 @@
 package com.trader.price;
 
+import com.trader.utils.MathOperations;
 import javafx.beans.property.SimpleStringProperty;
-
-import java.math.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class PriceService {
 
-    private double askPrice;
-    private double bidPrice;
     private double spread;
     private PriceFeed priceFeed;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -29,7 +26,6 @@ public class PriceService {
             started = true;
             while(started) {
                 update();
-                notifyObservers();
                 pause();
             }
         });
@@ -41,14 +37,6 @@ public class PriceService {
 
     public void addObserver(PriceObserver observer) {
         observers.add(observer);
-    }
-
-    public double getAskPrice() {
-        return askPrice;
-    }
-
-    public double getBidPrice() {
-        return bidPrice;
     }
 
     public SimpleStringProperty statusProperty() {
@@ -66,20 +54,16 @@ public class PriceService {
     private void update() {
         statusProperty.setValue("Status: " + priceFeed.getStatus().name() + "\n" +
                 priceFeed.getLastSuccessTime().format(dateFormatter));
-        double midPrice = priceFeed.nextPrice();
-        askPrice = round(midPrice + spread / 2);
-        bidPrice = round(midPrice - spread / 2);
+        double mid = priceFeed.nextPrice();
+        double ask = MathOperations.round(mid + spread / 2, 2);
+        double bid = MathOperations.round(mid - spread / 2, 2);
+
+        notifyObservers(bid, ask);
     }
 
-    private void notifyObservers() {
+    private void notifyObservers(double bid, double ask) {
         for(PriceObserver observer : observers) {
-            observer.update(bidPrice, askPrice);
+            observer.update(bid, ask);
         }
-    }
-
-    private double round(double value) {
-        BigDecimal bd = BigDecimal.valueOf(value);
-        bd = bd.setScale(2, RoundingMode.HALF_UP);
-        return bd.doubleValue();
     }
 }
