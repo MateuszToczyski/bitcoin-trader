@@ -1,31 +1,26 @@
 package com.trader.account;
 
 import com.trader.ApplicationRunner;
-import com.trader.price.*;
-import com.trader.exceptions.*;
-import java.text.NumberFormat;
-import java.util.Comparator;
-import java.util.Currency;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import com.trader.exceptions.BalanceExceededException;
+import com.trader.price.PriceObserver;
 import com.trader.utils.MathOperations;
+import com.trader.utils.NumberFormatter;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Account implements PriceObserver {
 
     private double balance;
     private double margin;
     private double openProfit;
-    private double marginLevel;
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
-    private transient NumberFormat currencyFormatter;
-    private transient NumberFormat percentageFormatter;
     private transient SimpleStringProperty balanceProperty;
     private transient SimpleStringProperty marginProperty;
     private transient SimpleStringProperty openProfitProperty;
@@ -55,16 +50,8 @@ public class Account implements PriceObserver {
             this.orders = FXCollections.observableArrayList(orders);
         }
 
-        currencyFormatter = NumberFormat.getCurrencyInstance();
-        currencyFormatter.setCurrency(Currency.getInstance("USD"));
-        currencyFormatter.setMinimumFractionDigits(2);
-        currencyFormatter.setGroupingUsed(true);
-
-        percentageFormatter = NumberFormat.getPercentInstance();
-        percentageFormatter.setMinimumFractionDigits(2);
-
-        balanceProperty = new SimpleStringProperty(currencyFormatter.format(balance));
-        marginProperty = new SimpleStringProperty(currencyFormatter.format(margin));
+        balanceProperty = new SimpleStringProperty(NumberFormatter.currencyFormat(balance));
+        marginProperty = new SimpleStringProperty(NumberFormatter.currencyFormat(margin));
         openProfitProperty = new SimpleStringProperty();
         marginLevelProperty = new SimpleStringProperty();
 
@@ -120,7 +107,7 @@ public class Account implements PriceObserver {
             balance = 0;
         }
 
-        balanceProperty.setValue(currencyFormatter.format(balance));
+        balanceProperty.setValue(NumberFormatter.currencyFormat(balance));
     }
 
     public void amendMargin(double value) {
@@ -131,7 +118,7 @@ public class Account implements PriceObserver {
             margin = 0;
         }
 
-        marginProperty.setValue(currencyFormatter.format(margin));
+        marginProperty.setValue(NumberFormatter.currencyFormat(margin));
     }
 
     public SimpleStringProperty balanceProperty() {
@@ -167,7 +154,9 @@ public class Account implements PriceObserver {
 
         openProfit = 0;
         openPositions.forEach(position -> openProfit += position.getProfit());
-        openProfitProperty.setValue(currencyFormatter.format(openProfit));
+        openProfitProperty.setValue(NumberFormatter.currencyFormat(openProfit));
+
+        double marginLevel;
 
         if(Math.abs(margin) > 0.001) {
             marginLevel = (balance + margin + openProfit) / margin;
@@ -176,7 +165,7 @@ public class Account implements PriceObserver {
         }
 
         if(marginLevel != 0) {
-            marginLevelProperty.setValue(percentageFormatter.format(marginLevel));
+            marginLevelProperty.setValue(NumberFormatter.percentFormat(marginLevel));
             if(marginLevel < ApplicationRunner.getStopOutLevel()) {
                 executeStopOut();
                 updateProfitAndMarginLevel();

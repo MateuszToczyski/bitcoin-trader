@@ -6,9 +6,7 @@ import com.trader.price.*;
 import com.trader.utils.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Currency;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -29,7 +27,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private SimpleStringProperty bidPriceProperty = new SimpleStringProperty();
     private SimpleStringProperty askPriceProperty = new SimpleStringProperty();
-    private SimpleStringProperty marginProperty = new SimpleStringProperty();
+    private SimpleStringProperty requiredMarginProperty = new SimpleStringProperty();
     private StringBuilder depositWithdrawalInput = new StringBuilder();
     private StringBuilder nominalInput = new StringBuilder();
     private TableView<Position> tableViewOpenPositions;
@@ -40,8 +38,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private static PriceService priceService;
     private static DataStorage dataStorage;
     private static Account account;
-    private static NumberFormat currencyFormatter;
-    private static NumberFormat priceFormatter;
 
     public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement, double stopOutLevel) {
 
@@ -65,15 +61,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
         if(account == null) {
             return;
         }
-
-        currencyFormatter = NumberFormat.getCurrencyInstance();
-        currencyFormatter.setCurrency(Currency.getInstance("USD"));
-        currencyFormatter.setMinimumFractionDigits(2);
-        currencyFormatter.setGroupingUsed(true);
-
-        priceFormatter = NumberFormat.getNumberInstance();
-        priceFormatter.setMinimumFractionDigits(2);
-        priceFormatter.setGroupingUsed(true);
 
         priceService.addObserver(this);
         priceService.addObserver(account);
@@ -136,11 +123,11 @@ public class ApplicationRunner extends Application implements PriceObserver {
         textAsk.textProperty().bind(askPriceProperty);
         upperGridPane.add(textAsk, 4, 1);
 
-        textFieldNominal = new TextField(priceFormatter.format(0));
+        textFieldNominal = new TextField(NumberFormatter.priceFormat(0));
         textFieldNominal.setMaxWidth(70);
         textFieldNominal.setOnKeyPressed(event -> Platform.runLater(() -> {
             appendNominalInput(event);
-            textFieldNominal.setText(formatNominalInput(priceFormatter));
+            textFieldNominal.setText(formatNominalInput());
             updateMarginProperty();
         }));
         upperGridPane.add(textFieldNominal, 3, 2);
@@ -162,7 +149,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         upperGridPane.add(buttonBuy, 4, 2);
 
         Text textMarginRequired = new Text();
-        textMarginRequired.textProperty().bind(marginProperty);
+        textMarginRequired.textProperty().bind(requiredMarginProperty);
         upperGridPane.add(textMarginRequired, 3, 3);
 
         TabPane tabPane = new TabPane();
@@ -343,11 +330,11 @@ public class ApplicationRunner extends Application implements PriceObserver {
         gridPane.setVgap(20);
         gridPane.setHgap(20);
 
-        TextField textFieldAmount = new TextField(currencyFormatter.format(0));
+        TextField textFieldAmount = new TextField(NumberFormatter.currencyFormat(0));
         textFieldAmount.setMinWidth(150);
         textFieldAmount.setOnKeyPressed(event -> Platform.runLater(() -> {
             appendDepositWithdrawalInput(event);
-            textFieldAmount.setText(formatDepositWithdrawalInput(currencyFormatter));
+            textFieldAmount.setText(formatDepositWithdrawalInput());
         }));
         gridPane.add(textFieldAmount, 0, 0, 2, 1);
 
@@ -366,7 +353,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
             if(depositWithdrawalInput.length() > 0 &&
                     Double.parseDouble(depositWithdrawalInput.toString()) / 100 > account.getBalance()) {
                 depositWithdrawalInput = new StringBuilder(String.valueOf(account.getBalance() * 100));
-                textFieldAmount.setText(formatDepositWithdrawalInput(currencyFormatter));
+                textFieldAmount.setText(formatDepositWithdrawalInput());
             } else {
                 account.amendBalance( - Double.parseDouble(depositWithdrawalInput.toString()) / 100);
                 depositWithdrawalInput.setLength(0);
@@ -414,19 +401,19 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
     }
 
-    private String formatDepositWithdrawalInput(NumberFormat formatter) {
+    private String formatDepositWithdrawalInput() {
         if(depositWithdrawalInput.length() == 0) {
-            return formatter.format(0);
+            return NumberFormatter.currencyFormat(0);
         } else {
-            return formatter.format(Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+            return NumberFormatter.currencyFormat(Double.parseDouble(depositWithdrawalInput.toString()) / 100);
         }
     }
 
-    private String formatNominalInput(NumberFormat formatter) {
+    private String formatNominalInput() {
         if(nominalInput.length() == 0) {
-            return formatter.format(0);
+            return NumberFormatter.priceFormat(0);
         } else {
-            return formatter.format(Double.parseDouble(nominalInput.toString()));
+            return NumberFormatter.priceFormat(Double.parseDouble(nominalInput.toString()));
         }
     }
 
@@ -518,7 +505,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
                     Double.parseDouble(nominalInput.toString()) * ApplicationRunner.marginRequirement;
         }
 
-        marginProperty.setValue("Margin:\n" + priceFormatter.format(MathOperations.round(margin, 2)));
+        requiredMarginProperty.setValue("Margin:\n" + NumberFormatter.priceFormat(MathOperations.round(margin, 2)));
     }
 
     private void modifyPosition(Position position) {
