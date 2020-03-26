@@ -32,7 +32,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private StringBuilder nominalInput = new StringBuilder();
     private TableView<Position> tableViewOpenPositions;
     private TextField textFieldNominal;
+    private Stage primaryStage;
 
+    private static boolean restarted;
     private static double marginRequirement;
     private static double stopOutLevel;
     private static PriceService priceService;
@@ -52,15 +54,13 @@ public class ApplicationRunner extends Application implements PriceObserver {
     @Override
     public void start(Stage primaryStage) {
 
-        try {
-            ApplicationRunner.account = dataStorage.retrieveAccount();
-        } catch(IOException | JSONException ex) {
-            confirmCreateNewAccount();
-        }
+        retrieveOrCreateAccount();
 
         if(account == null) {
             return;
         }
+
+        this.primaryStage = primaryStage;
 
         priceService.addObserver(this);
         priceService.addObserver(account);
@@ -98,15 +98,12 @@ public class ApplicationRunner extends Application implements PriceObserver {
         return marginRequirement;
     }
 
-    private void confirmCreateNewAccount() {
-
-        Alert alert = new Alert(Alert.AlertType.NONE, "Create a new account?",
-                ButtonType.YES, ButtonType.NO);
-
+    private void confirmNewAccount() {
+        Alert alert = new Alert(Alert.AlertType.NONE,
+                "Couldn't find a valid save file. Create a new account?", ButtonType.YES, ButtonType.NO);
         alert.showAndWait();
-
         if (alert.getResult() == ButtonType.YES) {
-            account = new Account(10000, 0, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+            generateNewAccount();
         }
     }
 
@@ -252,8 +249,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         GridPane bottomLeftGridPane = new GridPane();
         GridPane bottomRightGridPane = new GridPane();
+        GridPane bottomCenterGridPane = new GridPane();
 
-        GridPane[] bottomGridPanes = {bottomLeftGridPane, bottomRightGridPane};
+        GridPane[] bottomGridPanes = {bottomLeftGridPane, bottomRightGridPane, bottomCenterGridPane};
 
         for(GridPane gridPane : bottomGridPanes) {
             gridPane.setPadding(new Insets(15));
@@ -261,10 +259,9 @@ public class ApplicationRunner extends Application implements PriceObserver {
             gridPane.setVgap(5);
         }
 
-        bottomLeftGridPane.setAlignment(Pos.TOP_LEFT);
+        bottomCenterGridPane.setMinWidth(205);
 
-        bottomRightGridPane.setAlignment(Pos.TOP_RIGHT);
-        bottomRightGridPane.setMaxWidth(100);
+        bottomRightGridPane.setAlignment(Pos.BOTTOM_RIGHT);
 
         Text textBalanceLabel = new Text("Balance");
         bottomLeftGridPane.add(textBalanceLabel, 1, 0);
@@ -301,20 +298,17 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Text textStatus = new Text();
         textStatus.textProperty().bind(priceService.statusProperty());
-        bottomRightGridPane.add(textStatus, 0, 0);
+        bottomRightGridPane.add(textStatus, 1, 0);
+
+        Button buttonNewGame = new Button("New game");
+        buttonNewGame.setOnAction(event -> confirmNewGame());
+        bottomRightGridPane.add(buttonNewGame, 0, 0);
 
         GridPane bottomGridPane = new GridPane();
 
-        ColumnConstraints column1 = new ColumnConstraints();
-        column1.setPercentWidth(90);
-
-        ColumnConstraints column2 = new ColumnConstraints();
-        column2.setPercentWidth(10);
-
-        bottomGridPane.getColumnConstraints().addAll(column1, column2);
-
         bottomGridPane.add(bottomLeftGridPane, 0, 0);
-        bottomGridPane.add(bottomRightGridPane, 1, 0);
+        bottomGridPane.add(bottomCenterGridPane, 1, 0);
+        bottomGridPane.add(bottomRightGridPane, 2, 0);
 
         VBox vBox = new VBox();
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
@@ -572,5 +566,35 @@ public class ApplicationRunner extends Application implements PriceObserver {
         } else {
             position.setTakeProfit(Double.parseDouble(takeProfit));
         }
+    }
+
+    private void confirmNewGame() {
+        Alert alert = new Alert(Alert.AlertType.NONE, "Start a new game?", ButtonType.YES, ButtonType.NO);
+        alert.showAndWait();
+        if (alert.getResult() == ButtonType.YES) {
+            restarted = true;
+            primaryStage.close();
+            Platform.runLater(() -> start(new Stage()));
+        }
+    }
+
+    private void retrieveOrCreateAccount() {
+
+        if(restarted) {
+
+            generateNewAccount();
+
+        } else {
+
+            try {
+                ApplicationRunner.account = dataStorage.retrieveAccount();
+            } catch(IOException | JSONException ex) {
+                confirmNewAccount();
+            }
+        }
+    }
+
+    private void generateNewAccount() {
+        account = new Account(10000, 0, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 }
