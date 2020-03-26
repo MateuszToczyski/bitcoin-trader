@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,6 +22,14 @@ public class DataStorage {
     }
 
     public Account retrieveAccount() throws IOException {
+
+        File file = new File(path);
+        File parent = new File(file.getParent());
+
+        if(!parent.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            parent.mkdir();
+        }
 
         String contents = new String(Files.readAllBytes(Paths.get(path)));
         JSONObject jsonObject = new JSONObject(contents);
