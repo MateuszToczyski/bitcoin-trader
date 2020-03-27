@@ -1,27 +1,36 @@
 package com.trader;
 
 import com.trader.account.*;
-import com.trader.exceptions.*;
-import com.trader.price.*;
-import com.trader.utils.*;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-
+import com.trader.exceptions.BalanceExceededException;
+import com.trader.exceptions.InvalidNominalException;
+import com.trader.exceptions.WrongSideException;
+import com.trader.price.PriceObserver;
+import com.trader.price.PriceService;
+import com.trader.utils.MathOperations;
+import com.trader.utils.NumberFormatter;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.*;
-import javafx.scene.layout.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.json.JSONException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class ApplicationRunner extends Application implements PriceObserver {
 
@@ -64,7 +73,10 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         priceService.addObserver(this);
         priceService.addObserver(account);
-        priceService.start();
+
+        if(!priceService.isStarted()) {
+            priceService.start();
+        }
 
         primaryStage.setTitle("Bitcoin Trader");
         primaryStage.setWidth(900);
@@ -98,15 +110,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
         return marginRequirement;
     }
 
-    private void confirmNewAccount() {
-        Alert alert = new Alert(Alert.AlertType.NONE,
-                "Couldn't find a valid save file. Create a new account?", ButtonType.YES, ButtonType.NO);
-        alert.showAndWait();
-        if (alert.getResult() == ButtonType.YES) {
-            generateNewAccount();
-        }
-    }
-
     private Scene generateScene() {
 
         GridPane upperGridPane = new GridPane();
@@ -123,6 +126,14 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Text textAsk = new Text("Ask");
         textAsk.textProperty().bind(askPriceProperty);
         upperGridPane.add(textAsk, 4, 1);
+
+        Button buttonPendingOrder = new Button("+");
+        GridPane.setHalignment(buttonPendingOrder, HPos.CENTER);
+        GridPane.setValignment(buttonPendingOrder, VPos.BOTTOM);
+        buttonPendingOrder.setTooltip(new Tooltip("Pending order"));
+        buttonPendingOrder.setPadding(new Insets(0, 4, 0, 4));
+        buttonPendingOrder.setOnAction(event -> newOrderCreator());
+        upperGridPane.add(buttonPendingOrder, 3, 1);
 
         textFieldNominal = new TextField(NumberFormatter.priceFormat(0));
         textFieldNominal.setMaxWidth(70);
@@ -166,7 +177,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Side> colOpenPositionSide = new TableColumn<>("Side");
         colOpenPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
 
-        TableColumn<Position, Integer> colOpenPositionNominal = new TableColumn<>("Nominal");
+        TableColumn<Position, Double> colOpenPositionNominal = new TableColumn<>("Nominal");
         colOpenPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
 
         TableColumn<Position, Double> colOpenPositionOpenPrice = new TableColumn<>("Open price");
@@ -186,11 +197,11 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         TableColumn<Position, String> colOpenPositionClose = new TableColumn<>("");
         colOpenPositionClose.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-        colOpenPositionClose.setCellFactory(generateCloseCellFactory());
+        colOpenPositionClose.setCellFactory(closePositionCellFactory());
 
         TableColumn<Position, String> colOpenPositionModify = new TableColumn<>("");
         colOpenPositionModify.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-        colOpenPositionModify.setCellFactory(generateModifyCellFactory());
+        colOpenPositionModify.setCellFactory(modifyPositionCellFactory());
 
         tableViewOpenPositions.setItems(account.openPositions());
 
@@ -211,6 +222,37 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Tab tabOrders = new Tab("Orders");
 
+        TableView<Order> tableViewOrders = new TableView<>();
+
+        TableColumn<Order, Integer> colOrderId = new TableColumn<>("ID");
+        colOrderId.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+        TableColumn<Order, Order.Type> colOrderType = new TableColumn<>("Type");
+        colOrderType.setCellValueFactory(new PropertyValueFactory<>("type"));
+
+        TableColumn<Order, Side> colOrderSide = new TableColumn<>("Side");
+        colOrderSide.setCellValueFactory(new PropertyValueFactory<>("side"));
+
+        TableColumn<Order, Double> colOrderNominal = new TableColumn<>("Nominal");
+        colOrderNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
+
+        TableColumn<Order, Double> colOrderPrice = new TableColumn<>("Price");
+        colOrderPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
+
+        TableColumn<Order, String> colOrderModify = new TableColumn<>("");
+        colOrderModify.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
+        colOrderModify.setCellFactory(cancelOrderCellFactory());
+
+        tableViewOrders.setItems(account.orders());
+
+        //noinspection unchecked
+        tableViewOrders.getColumns().addAll(colOrderId, colOrderType, colOrderSide, colOrderNominal, colOrderPrice,
+                colOrderModify);
+
+        tableViewOrders.getColumns().forEach(column -> column.setMinWidth(80));
+
+        tabOrders.setContent(tableViewOrders);
+
         Tab tabHistory = new Tab("History");
 
         TableView<Position> tableViewClosedPositions = new TableView<>();
@@ -221,7 +263,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         TableColumn<Position, Side> colClosedPositionSide = new TableColumn<>("Side");
         colClosedPositionSide.setCellValueFactory(new PropertyValueFactory<>("side"));
 
-        TableColumn<Position, Integer> colClosedPositionNominal = new TableColumn<>("Nominal");
+        TableColumn<Position, Double> colClosedPositionNominal = new TableColumn<>("Nominal");
         colClosedPositionNominal.setCellValueFactory(new PropertyValueFactory<>("nominal"));
 
         TableColumn<Position, Double> colClosedPositionOpenPrice = new TableColumn<>("Open price");
@@ -314,6 +356,80 @@ public class ApplicationRunner extends Application implements PriceObserver {
         vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
 
         return new Scene(vBox);
+    }
+
+    private void confirmNewAccount() {
+        Alert alert = new Alert(Alert.AlertType.NONE,
+                "Couldn't find a valid save file. Create a new account?", ButtonType.YES, ButtonType.NO);
+        alert.showAndWait();
+        if (alert.getResult() == ButtonType.YES) {
+            generateNewAccount();
+        }
+    }
+
+    private void newOrderCreator() {
+
+        Stage stage = new Stage();
+        stage.setWidth(140);
+        stage.setHeight(250);
+
+        GridPane gridPane = new GridPane();
+        gridPane.setAlignment(Pos.TOP_CENTER);
+        gridPane.setPadding(new Insets(15));
+        gridPane.setVgap(10);
+        gridPane.setHgap(10);
+
+        String[] orderSides = {"BUY", "SELL"};
+        ComboBox<String> cmbOrderSides = new ComboBox<>(FXCollections.observableArrayList(orderSides));
+        cmbOrderSides.getSelectionModel().selectFirst();
+        cmbOrderSides.setMinWidth(80);
+        gridPane.add(cmbOrderSides, 0, 0);
+
+        String[] orderTypes = {"LIMIT", "STOP"};
+        ComboBox<String> cmbOrderTypes = new ComboBox<>(FXCollections.observableArrayList(orderTypes));
+        cmbOrderTypes.getSelectionModel().selectFirst();
+        cmbOrderTypes.setMinWidth(80);
+        gridPane.add(cmbOrderTypes, 0, 1);
+
+        TextField textFieldNominal = new TextField();
+        textFieldNominal.setPromptText("Nominal");
+        textFieldNominal.setMaxWidth(80);
+        gridPane.add(textFieldNominal, 0, 2);
+
+        TextField textFieldPrice = new TextField();
+        textFieldPrice.setPromptText("Price");
+        textFieldPrice.setMaxWidth(80);
+        gridPane.add(textFieldPrice, 0, 3);
+
+        Button buttonCreate = new Button("Create");
+        buttonCreate.setPrefWidth(80);
+        buttonCreate.setOnAction(event -> {
+            double nominal;
+            double price;
+
+            try {
+                nominal = Double.parseDouble(textFieldNominal.getText());
+                price = Double.parseDouble(textFieldPrice.getText());
+            } catch(NumberFormatException ex) {
+                Alert alert = new Alert(Alert.AlertType.NONE, "Invalid value", ButtonType.OK);
+                alert.show();
+                return;
+            }
+
+            Side side = Side.valueOf(cmbOrderSides.getValue());
+            Order.Type type = Order.Type.valueOf(cmbOrderTypes.getValue());
+
+            Order order = new Order(type, side, nominal, price);
+            tryAddOrder(order);
+            if(account.orders().contains(order)) {
+                stage.close();
+            }
+        });
+        gridPane.add(buttonCreate, 0, 5);
+
+        Scene scene = new Scene(gridPane);
+        stage.setScene(scene);
+        stage.show();
     }
 
     private void depositWithdrawal() {
@@ -415,7 +531,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         }
     }
 
-    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateCloseCellFactory() {
+    private Callback<TableColumn<Position, String>, TableCell<Position, String>> closePositionCellFactory() {
         return new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
             @Override
             public TableCell<Position, String> call(final TableColumn<Position, String> param) {
@@ -448,7 +564,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         };
     }
 
-    private Callback<TableColumn<Position, String>, TableCell<Position, String>> generateModifyCellFactory() {
+    private Callback<TableColumn<Position, String>, TableCell<Position, String>> modifyPositionCellFactory() {
         return new Callback<TableColumn<Position, String>, TableCell<Position, String>>() {
             @Override
             public TableCell<Position, String> call(final TableColumn<Position, String> param) {
@@ -481,6 +597,39 @@ public class ApplicationRunner extends Application implements PriceObserver {
         };
     }
 
+    private Callback<TableColumn<Order, String>, TableCell<Order, String>> cancelOrderCellFactory() {
+        return new Callback<TableColumn<Order, String>, TableCell<Order, String>>() {
+            @Override
+            public TableCell<Order, String> call(final TableColumn<Order, String> param) {
+
+                Button modifyButton = new Button("cancel");
+                modifyButton.setPadding(new Insets(0, 4, 0, 4));
+
+                return new TableCell<Order, String>() {
+
+                    @Override
+                    public void updateItem(String item, boolean empty) {
+
+                        super.updateItem(item, empty);
+
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            modifyButton.setOnAction(event -> {
+                                Order order = getTableView().getItems().get(getIndex());
+                                account.cancelOrder(order);
+                            });
+                            setGraphic(modifyButton);
+                        }
+
+                        setText(null);
+                        setPadding(new Insets(3));
+                    }
+                };
+            }
+        };
+    }
+
     private void tryAddPosition(Side side, double nominal) {
         try {
             account.addPosition(side, nominal);
@@ -489,6 +638,18 @@ public class ApplicationRunner extends Application implements PriceObserver {
             alert.show();
         } catch (BalanceExceededException ex) {
             Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds", ButtonType.OK);
+            alert.show();
+        }
+    }
+
+    private void tryAddOrder(Order order) {
+        try {
+            account.addOrder(order);
+        } catch(BalanceExceededException ex) {
+            Alert alert = new Alert(Alert.AlertType.NONE, "Insufficient funds", ButtonType.OK);
+            alert.show();
+        } catch(WrongSideException ex) {
+            Alert alert = new Alert(Alert.AlertType.NONE, "Wrong side of the market", ButtonType.OK);
             alert.show();
         }
     }
@@ -533,6 +694,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         Button btnApply = new Button("Apply");
         btnApply.setMinWidth(70);
+        GridPane.setHalignment(btnApply, HPos.CENTER);
         btnApply.setOnAction(event -> {
 
             try {
@@ -546,7 +708,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
                 alert.show();
             }
         });
-        gridPane.add(btnApply, 0, 2);
+        gridPane.add(btnApply, 0, 2, 2, 1);
 
         Scene scene = new Scene(gridPane);
         stage.setScene(scene);
@@ -581,11 +743,8 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private void retrieveOrCreateAccount() {
 
         if(restarted) {
-
             generateNewAccount();
-
         } else {
-
             try {
                 ApplicationRunner.account = dataStorage.retrieveAccount();
             } catch(IOException | JSONException ex) {

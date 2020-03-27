@@ -43,6 +43,10 @@ public class PriceService {
         return statusProperty;
     }
 
+    public boolean isStarted() {
+        return started;
+    }
+
     private void pause() {
         try {
             TimeUnit.SECONDS.sleep(1);

@@ -2,6 +2,7 @@ package com.trader.account;
 
 import com.trader.ApplicationRunner;
 import com.trader.exceptions.BalanceExceededException;
+import com.trader.exceptions.WrongSideException;
 import com.trader.price.PriceObserver;
 import com.trader.utils.MathOperations;
 import com.trader.utils.NumberFormatter;
@@ -58,6 +59,7 @@ public class Account implements PriceObserver {
         marginLevelProperty = new SimpleStringProperty();
 
         Position.setMaxId(findMaxPositionId());
+        Order.setMaxId(findMaxOrderId());
 
         updateProfitAndMarginLevel();
     }
@@ -68,14 +70,22 @@ public class Account implements PriceObserver {
         currentBid = bid;
         currentAsk = ask;
 
-        openPositions.forEach(position -> {
+        for(int i = orders.size() - 1; i >= 0; i--) {
+            Order order = orders.get(i);
+            order.update(bid, ask);
+            if(order.isActivated()) {
+                addPosition(order.getSide(), order.getNominal());
+                cancelOrder(order);
+            }
+        }
 
+        for(int i = openPositions.size() - 1; i >= 0; i--) {
+            Position position = openPositions.get(i);
             position.update(currentBid, currentAsk);
-
             if(position.isStopLossActivated() || position.isTakeProfitActivated()) {
                 closePosition(position);
             }
-        });
+        }
 
         updateProfitAndMarginLevel();
     }
@@ -102,12 +112,44 @@ public class Account implements PriceObserver {
         updateProfitAndMarginLevel();
     }
 
+    public void closePosition(Position position) {
+        position.close();
+        amendBalance(position.getProfit() + position.getMargin());
+        amendMargin(-position.getMargin());
+        openPositions.remove(position);
+        closedPositions.add(position);
+        updateProfitAndMarginLevel();
+    }
+
+    public void addOrder(Order order) {
+
+        if(order.getMargin() > balance) {
+            throw new BalanceExceededException();
+        } else if(!orderPriceValid(order)) {
+            throw new WrongSideException();
+        } else {
+            orders.add(order);
+            amendBalance(-order.getMargin());
+            amendMargin(order.getMargin());
+        }
+    }
+
+    public void cancelOrder(Order order) {
+        orders.remove(order);
+        amendBalance(order.getMargin());
+        amendMargin(-order.getMargin());
+    }
+
     public ObservableList<Position> openPositions() {
         return openPositions;
     }
 
     public ObservableList<Position> closedPositions() {
         return closedPositions;
+    }
+
+    public ObservableList<Order> orders() {
+        return orders;
     }
 
     public void amendBalance(double value) {
@@ -152,25 +194,8 @@ public class Account implements PriceObserver {
         return marginLevelProperty;
     }
 
-    public void closePosition(Position position) {
-        position.close();
-        amendBalance(position.getProfit() + position.getMargin());
-        amendMargin(-position.getMargin());
-        openPositions.remove(position);
-        closedPositions.add(position);
-        updateProfitAndMarginLevel();
-    }
-
     public double getBalance() {
         return balance;
-    }
-
-    public double getCurrentBid() {
-        return currentBid;
-    }
-
-    public double getCurrentAsk() {
-        return currentAsk;
     }
 
     private void updateProfitAndMarginLevel() {
@@ -210,9 +235,22 @@ public class Account implements PriceObserver {
                 .orElse(0);
     }
 
+    private int findMaxOrderId() {
+        return orders.stream()
+                .map(Order::getId)
+                .max(Comparator.comparing(id -> id))
+                .orElse(0);
+    }
+
     private void executeStopOut() {
         openPositions.stream()
                 .min(Comparator.comparing(Position::getProfit))
                 .ifPresent(this::closePosition);
+    }
+
+    private boolean orderPriceValid(Order order) {
+        return order.getType().equals(Order.Type.LIMIT) ||
+                order.getSide().equals(Side.BUY) && order.getPrice() > currentAsk ||
+                order.getSide().equals(Side.SELL) && order.getPrice() < currentBid;
     }
 }

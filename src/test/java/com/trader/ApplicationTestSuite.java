@@ -11,12 +11,12 @@ public class ApplicationTestSuite {
     public void testApplicationBasicStartup() {
 
         DataStorage dataStorage = new DataStorage("src/test/resources/Account.json");
-        PriceFeed priceFeed = new PriceFeedStub(PriceFeedStub.Direction.DOWN, 0.01);
+        PriceFeed priceFeed = new PriceFeedStub(PriceFeedStub.Direction.UP, 0.01);
         PriceService priceService = new PriceService(1, priceFeed);
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
         try {
-            applicationRunner.run(priceService, dataStorage, 0.05, 0.3);
+            applicationRunner.run(priceService, dataStorage, 0.01, 0.3);
         } catch(Exception ex) {
             ex.printStackTrace();
         }
