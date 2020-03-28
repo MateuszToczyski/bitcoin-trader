@@ -17,6 +17,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Scene;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
@@ -112,20 +116,29 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private Scene generateScene() {
 
-        GridPane upperGridPane = new GridPane();
+        VBox upperVBox = new VBox();
 
-        upperGridPane.setAlignment(Pos.TOP_CENTER);
-        upperGridPane.setHgap(20);
-        upperGridPane.setVgap(10);
-        upperGridPane.setPadding(new Insets(10, 0, 30, 0));
+        GridPane chartGridPane = new GridPane();
+        chartGridPane.setAlignment(Pos.TOP_CENTER);
+        chartGridPane.setMaxHeight(250);
+
+        LineChart<String, Number> chart = generateChart();
+        chartGridPane.add(chart, 0, 0);
+
+        GridPane tradingGridPane = new GridPane();
+
+        tradingGridPane.setAlignment(Pos.TOP_CENTER);
+        tradingGridPane.setHgap(20);
+        tradingGridPane.setVgap(10);
+        tradingGridPane.setPadding(new Insets(0, 0, 30, 0));
 
         Text textBid = new Text("Bid");
         textBid.textProperty().bind(bidPriceProperty);
-        upperGridPane.add(textBid, 2, 1);
+        tradingGridPane.add(textBid, 0, 1);
 
         Text textAsk = new Text("Ask");
         textAsk.textProperty().bind(askPriceProperty);
-        upperGridPane.add(textAsk, 4, 1);
+        tradingGridPane.add(textAsk, 2, 1);
 
         Button buttonPendingOrder = new Button("+");
         GridPane.setHalignment(buttonPendingOrder, HPos.CENTER);
@@ -133,7 +146,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         buttonPendingOrder.setTooltip(new Tooltip("Pending order"));
         buttonPendingOrder.setPadding(new Insets(0, 4, 0, 4));
         buttonPendingOrder.setOnAction(event -> newOrderCreator());
-        upperGridPane.add(buttonPendingOrder, 3, 1);
+        tradingGridPane.add(buttonPendingOrder, 1, 1);
 
         textFieldNominal = new TextField(NumberFormatter.priceFormat(0));
         textFieldNominal.setMaxWidth(70);
@@ -142,7 +155,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
             textFieldNominal.setText(formatNominalInput());
             updateMarginProperty();
         }));
-        upperGridPane.add(textFieldNominal, 3, 2);
+        tradingGridPane.add(textFieldNominal, 1, 2);
 
         Button buttonSell = new Button("SELL");
         buttonSell.setMinWidth(60);
@@ -150,7 +163,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
             tryAddPosition(Side.SELL, openNominal);
         });
-        upperGridPane.add(buttonSell, 2, 2);
+        tradingGridPane.add(buttonSell, 0, 2);
 
         Button buttonBuy = new Button("BUY");
         buttonBuy.setMinWidth(60);
@@ -158,18 +171,21 @@ public class ApplicationRunner extends Application implements PriceObserver {
             double openNominal = nominalInput.toString().equals("") ? 0 : Double.parseDouble(nominalInput.toString());
             tryAddPosition(Side.BUY, openNominal);
         });
-        upperGridPane.add(buttonBuy, 4, 2);
+        tradingGridPane.add(buttonBuy, 2, 2);
 
         Text textMarginRequired = new Text();
         textMarginRequired.textProperty().bind(requiredMarginProperty);
-        upperGridPane.add(textMarginRequired, 3, 3);
+        tradingGridPane.add(textMarginRequired, 1, 3);
+
+        upperVBox.getChildren().addAll(chartGridPane, tradingGridPane);
 
         TabPane tabPane = new TabPane();
-        tabPane.setMinHeight(300);
+        tabPane.setPrefHeight(300);
 
         Tab tabPositions = new Tab("Positions");
 
         tableViewOpenPositions = new TableView<>();
+        tableViewOpenPositions.setPlaceholder(new Label(""));
 
         TableColumn<Position, Integer> colOpenPositionId = new TableColumn<>("ID");
         colOpenPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -223,6 +239,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Tab tabOrders = new Tab("Orders");
 
         TableView<Order> tableViewOrders = new TableView<>();
+        tableViewOrders.setPlaceholder(new Label(""));
 
         TableColumn<Order, Integer> colOrderId = new TableColumn<>("ID");
         colOrderId.setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -256,6 +273,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Tab tabHistory = new Tab("History");
 
         TableView<Position> tableViewClosedPositions = new TableView<>();
+        tableViewClosedPositions.setPlaceholder(new Label(""));
 
         TableColumn<Position, Integer> colClosedPositionId = new TableColumn<>("ID");
         colClosedPositionId.setCellValueFactory(new PropertyValueFactory<>("id"));
@@ -353,9 +371,34 @@ public class ApplicationRunner extends Application implements PriceObserver {
         bottomGridPane.add(bottomRightGridPane, 2, 0);
 
         VBox vBox = new VBox();
-        vBox.getChildren().addAll(upperGridPane, tabPane, bottomGridPane);
+        vBox.getChildren().addAll(upperVBox, tabPane, bottomGridPane);
 
         return new Scene(vBox);
+    }
+
+    private LineChart<String, Number> generateChart() {
+
+        //defining the axes
+        final CategoryAxis xAxis = new CategoryAxis(); // we are gonna plot against time
+        final NumberAxis yAxis = new NumberAxis();
+        //xAxis.setLabel("Time/s");
+        xAxis.setAnimated(false); // axis animations are removed
+        //yAxis.setLabel("Value");
+        yAxis.setAnimated(false); // axis animations are removed
+
+        //creating the line chart with two axis created above
+        final LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setAnimated(false); // disable animations
+        chart.setLegendVisible(false);
+
+        //defining a series to display data
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("BTC/USD");
+
+        // add series to chart
+        chart.getData().add(series);
+
+        return chart;
     }
 
     private void confirmNewAccount() {
