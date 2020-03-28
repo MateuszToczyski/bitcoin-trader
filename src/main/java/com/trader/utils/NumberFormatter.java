@@ -10,7 +10,6 @@ public class NumberFormatter {
     private static NumberFormat percentFormatter;
 
     static {
-
         currencyFormatter = NumberFormat.getCurrencyInstance();
         currencyFormatter.setCurrency(Currency.getInstance("USD"));
         currencyFormatter.setMinimumFractionDigits(2);

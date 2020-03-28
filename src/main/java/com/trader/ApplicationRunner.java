@@ -4,10 +4,12 @@ import com.trader.account.*;
 import com.trader.exceptions.BalanceExceededException;
 import com.trader.exceptions.InvalidNominalException;
 import com.trader.exceptions.WrongSideException;
+import com.trader.price.DatePricePair;
 import com.trader.price.PriceObserver;
 import com.trader.price.PriceService;
 import com.trader.utils.MathOperations;
 import com.trader.utils.NumberFormatter;
+import com.trader.utils.TimeFormatter;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -34,7 +36,7 @@ import org.json.JSONException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 
 public class ApplicationRunner extends Application implements PriceObserver {
 
@@ -53,13 +55,19 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private static PriceService priceService;
     private static DataStorage dataStorage;
     private static Account account;
+    private static XYChart.Series<String, Number> priceDataSeries;
+    private static NumberAxis yAxis;
 
-    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement, double stopOutLevel) {
+    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement, double stopOutLevel)
+            throws IOException {
 
         ApplicationRunner.priceService = priceService;
         ApplicationRunner.dataStorage = dataStorage;
         ApplicationRunner.marginRequirement = marginRequirement;
         ApplicationRunner.stopOutLevel = stopOutLevel;
+
+        priceDataSeries = new XYChart.Series<>();
+        loadInitialPriceSet();
 
         launch();
     }
@@ -99,11 +107,18 @@ public class ApplicationRunner extends Application implements PriceObserver {
     }
 
     @Override
-    public void update(double bidPrice, double askPrice) {
-        bidPriceProperty.setValue(String.valueOf(bidPrice));
-        askPriceProperty.setValue(String.valueOf(askPrice));
+    public void update(double bid, double ask) {
+
+        bidPriceProperty.setValue(String.valueOf(bid));
+        askPriceProperty.setValue(String.valueOf(ask));
+
         updateMarginProperty();
-        Platform.runLater(() -> tableViewOpenPositions.refresh());
+
+        Platform.runLater(() -> {
+            tableViewOpenPositions.refresh();
+            appendPriceDataSeries(bid);
+            updateChartNumberAxisBounds();
+        });
     }
 
     public static double getStopOutLevel() {
@@ -378,27 +393,89 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
     private LineChart<String, Number> generateChart() {
 
-        //defining the axes
-        final CategoryAxis xAxis = new CategoryAxis(); // we are gonna plot against time
-        final NumberAxis yAxis = new NumberAxis();
-        //xAxis.setLabel("Time/s");
-        xAxis.setAnimated(false); // axis animations are removed
-        //yAxis.setLabel("Value");
-        yAxis.setAnimated(false); // axis animations are removed
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setAnimated(false);
 
-        //creating the line chart with two axis created above
+        yAxis = new NumberAxis();
+        yAxis.setAnimated(false);
+        yAxis.setAutoRanging(false);
+
         final LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setAnimated(false); // disable animations
+        chart.setAnimated(false);
         chart.setLegendVisible(false);
 
-        //defining a series to display data
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("BTC/USD");
+        chart.getData().add(priceDataSeries);
+        chart.setCreateSymbols(false);
 
-        // add series to chart
-        chart.getData().add(series);
+        updateChartNumberAxisBounds();
 
         return chart;
+    }
+
+    private void updateChartNumberAxisBounds() {
+        Platform.runLater(() -> {
+            yAxis.setLowerBound(MathOperations.round(findLowestPriceInSeries() - 1, 0));
+            yAxis.setUpperBound(MathOperations.round(findHighestPriceInSeries() + 1, 0));
+            yAxis.setTickUnit(1);
+        });
+    }
+
+    private double findLowestPriceInSeries() {
+
+        double lowest = (double)priceDataSeries.getData().get(0).getYValue();
+
+        for(XYChart.Data<String, Number> data : priceDataSeries.getData()) {
+            if((double)data.getYValue() < lowest) {
+                lowest = (double)data.getYValue();
+            }
+        }
+
+        return lowest;
+    }
+
+    private double findHighestPriceInSeries() {
+
+        double highest = (double)priceDataSeries.getData().get(0).getYValue();
+
+        for(XYChart.Data<String, Number> data : priceDataSeries.getData()) {
+            if((double)data.getYValue() > highest) {
+                highest = (double)data.getYValue();
+            }
+        }
+
+        return highest;
+    }
+
+    private void loadInitialPriceSet() throws IOException {
+
+        List<DatePricePair> prices = priceService.getInitialPriceSet();
+
+        for(int i = 19; i >= 0; i--) {
+            Date date = prices.get(i).getDate();
+            double price = prices.get(i).getPrice();
+            priceDataSeries.getData().add(new XYChart.Data<>(TimeFormatter.format(date), price));
+            System.out.println(date.toString() + ", " + price);
+        }
+    }
+
+    private void appendPriceDataSeries(double value) {
+
+        double lastValue = 0;
+
+        if(priceDataSeries.getData().size() > 0) {
+            lastValue = (double)priceDataSeries.getData().get(priceDataSeries.getData().size() - 1).getYValue();
+        }
+
+        if(value == lastValue) {
+            return;
+        }
+
+        if(priceDataSeries.getData().size() >= 20) {
+            priceDataSeries.getData().remove(0);
+        }
+
+        priceDataSeries.getData().add(new XYChart.Data<>(
+                TimeFormatter.format(Calendar.getInstance().getTime()), value));
     }
 
     private void confirmNewAccount() {

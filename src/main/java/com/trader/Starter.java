@@ -1,22 +1,20 @@
 package com.trader;
 
-import com.squareup.okhttp.OkHttpClient;
-import com.trader.account.*;
-import com.trader.price.*;
+import com.trader.account.DataStorage;
+import com.trader.price.PriceFeed;
+import com.trader.price.PriceService;
+import com.trader.utils.PropertyLoader;
 
 public class Starter {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        DataStorage dataStorage = new DataStorage("src/main/resources/Account.json");
-        PriceFeed priceFeed = new PriceFeed("https://www.bitstamp.net/api/v2/ticker/btcusd", new OkHttpClient());
+        PropertyLoader propertyLoader = new PropertyLoader("app.properties");
+        DataStorage dataStorage = new DataStorage(propertyLoader.get("accountDataFile"));
+        PriceFeed priceFeed = new PriceFeed(propertyLoader.get("singlePriceUrl"), propertyLoader.get("priceSetUrl"));
         PriceService priceService = new PriceService(1, priceFeed);
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
-        try {
-            applicationRunner.run(priceService, dataStorage, 0.01, 0.3);
-        } catch(Exception ex) {
-            ex.printStackTrace();
-        }
+        applicationRunner.run(priceService, dataStorage, 0.01, 0.3);
     }
 }

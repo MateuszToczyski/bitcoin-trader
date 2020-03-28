@@ -2,6 +2,8 @@ package com.trader.price;
 
 import com.trader.utils.MathOperations;
 import javafx.beans.property.SimpleStringProperty;
+
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
@@ -35,6 +37,10 @@ public class PriceService {
         started = false;
     }
 
+    public List<DatePricePair> getInitialPriceSet() throws IOException {
+        return priceFeed.getInitialPriceSet();
+    }
+
     public void addObserver(PriceObserver observer) {
         observers.add(observer);
     }
@@ -58,7 +64,7 @@ public class PriceService {
     private void update() {
         statusProperty.setValue("Status: " + priceFeed.getStatus().name() + "\n" +
                 priceFeed.getLastSuccessTime().format(dateFormatter));
-        double mid = priceFeed.nextPrice();
+        double mid = priceFeed.getNextPrice();
         double ask = MathOperations.round(mid + spread / 2, 2);
         double bid = MathOperations.round(mid - spread / 2, 2);
 
