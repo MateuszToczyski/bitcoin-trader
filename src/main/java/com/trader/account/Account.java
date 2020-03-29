@@ -21,6 +21,7 @@ public class Account implements PriceObserver {
     private double balance;
     private double margin;
     private double openProfit;
+    private double marginLevel;
     private ObservableList<Position> openPositions;
     private ObservableList<Position> closedPositions;
     private ObservableList<Order> orders;
@@ -200,13 +201,23 @@ public class Account implements PriceObserver {
         return marginRequirement;
     }
 
+    public double getOpenProfit() {
+        return openProfit;
+    }
+
+    public double getMargin() {
+        return margin;
+    }
+
+    public double getMarginLevel() {
+        return marginLevel;
+    }
+
     private void updateProfitAndMarginLevel() {
 
         openProfit = 0;
         openPositions.forEach(position -> openProfit += position.getProfit());
         openProfitProperty.setValue(NumberFormatter.currencyFormat(openProfit));
-
-        double marginLevel;
 
         if(Math.abs(margin) > 0.001) {
             marginLevel = (balance + margin + openProfit) / margin;
