@@ -1,6 +1,5 @@
 package com.trader.account;
 
-import com.trader.ApplicationRunner;
 import com.trader.exceptions.BalanceExceededException;
 import com.trader.exceptions.WrongSideException;
 import com.trader.price.PriceObserver;
@@ -9,6 +8,7 @@ import com.trader.utils.NumberFormatter;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +16,8 @@ import java.util.stream.Stream;
 
 public class Account implements PriceObserver {
 
+    private double marginRequirement;
+    private double stopOutLevel;
     private double balance;
     private double margin;
     private double openProfit;
@@ -29,9 +31,11 @@ public class Account implements PriceObserver {
     private transient SimpleStringProperty openProfitProperty;
     private transient SimpleStringProperty marginLevelProperty;
 
-    public Account(double balance, double margin, List<Position> openPositions,
+    public Account(double marginRequirement, double stopOutLevel, double balance, double margin, List<Position> openPositions,
                    List<Position> closedPositions, List<Order> orders) {
 
+        this.marginRequirement = marginRequirement;
+        this.stopOutLevel = stopOutLevel;
         this.balance = balance;
         this.margin = margin;
 
@@ -74,8 +78,8 @@ public class Account implements PriceObserver {
             Order order = orders.get(i);
             order.update(bid, ask);
             if(order.isActivated()) {
-                addPosition(order.getSide(), order.getNominal());
                 cancelOrder(order);
+                addPosition(order.getSide(), order.getNominal());
             }
         }
 
@@ -100,13 +104,9 @@ public class Account implements PriceObserver {
             openPrice = currentBid;
         }
 
-        Position position = new Position(side, nominal, openPrice, ApplicationRunner.getMarginRequirement());
+        Position position = new Position(side, nominal, openPrice, marginRequirement);
 
-        if(position.getMargin() > balance) {
-            throw new BalanceExceededException();
-        }
-
-        amendBalance(-position.getMargin());
+        amendBalance(-position.getMargin(), false);
         amendMargin(position.getMargin());
         openPositions.add(position);
         updateProfitAndMarginLevel();
@@ -114,7 +114,7 @@ public class Account implements PriceObserver {
 
     public void closePosition(Position position) {
         position.close();
-        amendBalance(position.getProfit() + position.getMargin());
+        amendBalance(position.getProfit() + position.getMargin(), true);
         amendMargin(-position.getMargin());
         openPositions.remove(position);
         closedPositions.add(position);
@@ -123,20 +123,18 @@ public class Account implements PriceObserver {
 
     public void addOrder(Order order) {
 
-        if(order.getMargin() > balance) {
-            throw new BalanceExceededException();
-        } else if(!orderPriceValid(order)) {
+        if(!orderPriceValid(order)) {
             throw new WrongSideException();
         } else {
-            orders.add(order);
-            amendBalance(-order.getMargin());
+            amendBalance(-order.getMargin(), false);
             amendMargin(order.getMargin());
+            orders.add(order);
         }
     }
 
     public void cancelOrder(Order order) {
         orders.remove(order);
-        amendBalance(order.getMargin());
+        amendBalance(order.getMargin(), true);
         amendMargin(-order.getMargin());
     }
 
@@ -152,9 +150,9 @@ public class Account implements PriceObserver {
         return orders;
     }
 
-    public void amendBalance(double value) {
+    public void amendBalance(double value, boolean allowNegative) {
 
-        if(balance + MathOperations.round(value, 2) < 0) {
+        if(balance + MathOperations.round(value, 2) < 0 && !allowNegative) {
             throw new BalanceExceededException();
         }
 
@@ -198,6 +196,10 @@ public class Account implements PriceObserver {
         return balance;
     }
 
+    public double getMarginRequirement() {
+        return marginRequirement;
+    }
+
     private void updateProfitAndMarginLevel() {
 
         openProfit = 0;
@@ -214,7 +216,7 @@ public class Account implements PriceObserver {
 
         if(marginLevel != 0) {
             marginLevelProperty.setValue(NumberFormatter.percentFormat(marginLevel));
-            if(marginLevel < ApplicationRunner.getStopOutLevel()) {
+            if(marginLevel < stopOutLevel) {
                 executeStopOut();
                 updateProfitAndMarginLevel();
             }

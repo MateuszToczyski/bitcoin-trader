@@ -1,7 +1,5 @@
 package com.trader.account;
 
-import com.trader.ApplicationRunner;
-
 import java.util.Objects;
 
 public class Order {
@@ -21,12 +19,12 @@ public class Order {
     private boolean activated;
     private double margin;
 
-    public Order(Type type, Side side, double nominal, double price) {
+    public Order(Type type, Side side, double nominal, double price, double marginRequirement) {
         this.type = type;
         this.side = side;
         this.nominal = nominal;
         this.price = price;
-        margin = price * nominal * ApplicationRunner.getMarginRequirement();
+        margin = price * nominal * marginRequirement;
 
         maxId++;
         id = maxId;

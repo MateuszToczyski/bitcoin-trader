@@ -7,14 +7,20 @@ import com.trader.utils.PropertyLoader;
 
 public class Starter {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
-        PropertyLoader propertyLoader = new PropertyLoader("app.properties");
-        DataStorage dataStorage = new DataStorage(propertyLoader.get("accountDataFile"));
-        PriceFeed priceFeed = new PriceFeed(propertyLoader.get("singlePriceUrl"), propertyLoader.get("priceSetUrl"));
-        PriceService priceService = new PriceService(1, priceFeed);
-        ApplicationRunner applicationRunner = new ApplicationRunner();
+        try {
 
-        applicationRunner.run(priceService, dataStorage, 0.01, 0.3);
+            PropertyLoader propertyLoader = new PropertyLoader("app.properties");
+            DataStorage dataStorage = new DataStorage(propertyLoader.get("accountDataFile"));
+            PriceFeed priceFeed = new PriceFeed(propertyLoader.get("singlePriceUrl"), propertyLoader.get("priceSetUrl"));
+            PriceService priceService = new PriceService(1, priceFeed);
+            ApplicationRunner applicationRunner = new ApplicationRunner();
+
+            applicationRunner.run(priceService, dataStorage);
+
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
     }
 }

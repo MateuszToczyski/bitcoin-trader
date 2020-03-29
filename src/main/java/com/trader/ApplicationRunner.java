@@ -50,21 +50,16 @@ public class ApplicationRunner extends Application implements PriceObserver {
     private Stage primaryStage;
 
     private static boolean restarted;
-    private static double marginRequirement;
-    private static double stopOutLevel;
     private static PriceService priceService;
     private static DataStorage dataStorage;
     private static Account account;
     private static XYChart.Series<String, Number> priceDataSeries;
     private static NumberAxis yAxis;
 
-    public void run(PriceService priceService, DataStorage dataStorage, double marginRequirement, double stopOutLevel)
-            throws IOException {
+    public void run(PriceService priceService, DataStorage dataStorage) throws IOException {
 
         ApplicationRunner.priceService = priceService;
         ApplicationRunner.dataStorage = dataStorage;
-        ApplicationRunner.marginRequirement = marginRequirement;
-        ApplicationRunner.stopOutLevel = stopOutLevel;
 
         priceDataSeries = new XYChart.Series<>();
         loadInitialPriceSet();
@@ -119,14 +114,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
             appendPriceDataSeries(bid);
             updateChartNumberAxisBounds();
         });
-    }
-
-    public static double getStopOutLevel() {
-        return stopOutLevel;
-    }
-
-    public static double getMarginRequirement() {
-        return marginRequirement;
     }
 
     private Scene generateScene() {
@@ -454,7 +441,6 @@ public class ApplicationRunner extends Application implements PriceObserver {
             Date date = prices.get(i).getDate();
             double price = prices.get(i).getPrice();
             priceDataSeries.getData().add(new XYChart.Data<>(TimeFormatter.format(date), price));
-            System.out.println(date.toString() + ", " + price);
         }
     }
 
@@ -539,7 +525,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
             Side side = Side.valueOf(cmbOrderSides.getValue());
             Order.Type type = Order.Type.valueOf(cmbOrderTypes.getValue());
 
-            Order order = new Order(type, side, nominal, price);
+            Order order = new Order(type, side, nominal, price, account.getMarginRequirement());
             tryAddOrder(order);
             if(account.orders().contains(order)) {
                 stage.close();
@@ -575,7 +561,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
         Button buttonDeposit = new Button("Deposit");
         buttonDeposit.setMinWidth(70);
         buttonDeposit.setOnAction(event -> {
-            account.amendBalance(Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+            account.amendBalance(Double.parseDouble(depositWithdrawalInput.toString()) / 100, false);
             depositWithdrawalInput.setLength(0);
             stage.close();
         });
@@ -589,7 +575,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
                 depositWithdrawalInput = new StringBuilder(String.valueOf(account.getBalance() * 100));
                 textFieldAmount.setText(formatDepositWithdrawalInput());
             } else {
-                account.amendBalance( - Double.parseDouble(depositWithdrawalInput.toString()) / 100);
+                account.amendBalance( - Double.parseDouble(depositWithdrawalInput.toString()) / 100, false);
                 depositWithdrawalInput.setLength(0);
                 stage.close();
             }
@@ -780,7 +766,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
 
         if(nominalInput.length() > 0) {
             margin = Double.parseDouble(askPriceProperty.getValue()) *
-                    Double.parseDouble(nominalInput.toString()) * ApplicationRunner.marginRequirement;
+                    Double.parseDouble(nominalInput.toString()) * account.getMarginRequirement();
         }
 
         requiredMarginProperty.setValue("Margin:\n" + NumberFormatter.priceFormat(MathOperations.round(margin, 2)));
@@ -874,6 +860,7 @@ public class ApplicationRunner extends Application implements PriceObserver {
     }
 
     private void generateNewAccount() {
-        account = new Account(10000, 0, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        account = new Account(0.01, 0.3, 10000, 0,
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 }

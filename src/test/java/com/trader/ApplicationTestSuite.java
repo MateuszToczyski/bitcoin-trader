@@ -15,7 +15,7 @@ public class ApplicationTestSuite {
         ApplicationRunner applicationRunner = new ApplicationRunner();
 
         try {
-            applicationRunner.run(priceService, dataStorage, 0.01, 0.3);
+            applicationRunner.run(priceService, dataStorage);
         } catch(Exception ex) {
             ex.printStackTrace();
         }

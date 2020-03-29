@@ -34,6 +34,8 @@ public class DataStorage {
         String contents = new String(Files.readAllBytes(Paths.get(path)));
         JSONObject jsonObject = new JSONObject(contents);
 
+        double marginRequirement = Double.parseDouble(jsonObject.get("marginRequirement").toString());
+        double stopOutLevel = Double.parseDouble(jsonObject.get("stopOutLevel").toString());
         double balance = Double.parseDouble(jsonObject.get("balance").toString());
         double margin = Double.parseDouble(jsonObject.get("margin").toString());
 
@@ -46,7 +48,7 @@ public class DataStorage {
         List<Position> closedPositions = gson.fromJson(jsonObject.get("closedPositions").toString(), positionListType);
         List<Order> orders = gson.fromJson(jsonObject.get("orders").toString(), orderListType);
 
-        return new Account(balance, margin, openPositions, closedPositions, orders);
+        return new Account(marginRequirement, stopOutLevel, balance, margin, openPositions, closedPositions, orders);
     }
 
     public void storeAccount(Account account) throws FileNotFoundException {
