@@ -23,7 +23,7 @@ public class Position implements PriceObserver {
     private boolean stopLossActivated;
     private boolean takeProfitActivated;
 
-    public Position(Side side, double nominal, double openPrice, double marginRequirement) {
+    public Position(Side side, double nominal, double openPrice, double closePrice, double marginRequirement) {
 
         if(nominal <= 0) {
             throw new InvalidNominalException();
@@ -32,6 +32,7 @@ public class Position implements PriceObserver {
         this.side = side;
         this.nominal = nominal;
         this.openPrice = openPrice;
+        this.closePrice = closePrice;
         this.margin = MathOperations.round(marginRequirement * nominal * openPrice, 2);
 
         maxId++;

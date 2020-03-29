@@ -98,14 +98,17 @@ public class Account implements PriceObserver {
     public void addPosition(Side side, double nominal) {
 
         double openPrice;
+        double closePrice;
 
         if(side.equals(Side.BUY)) {
             openPrice = currentAsk;
+            closePrice = currentBid;
         } else {
             openPrice = currentBid;
+            closePrice = currentAsk;
         }
 
-        Position position = new Position(side, nominal, openPrice, marginRequirement);
+        Position position = new Position(side, nominal, openPrice, closePrice, marginRequirement);
 
         amendBalance(-position.getMargin(), false);
         amendMargin(position.getMargin());
