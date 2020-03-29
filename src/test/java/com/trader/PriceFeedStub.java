@@ -48,7 +48,7 @@ public class PriceFeedStub extends PriceFeed {
         List<DatePricePair> list = new LinkedList<>();
 
         for(int i = 0; i < 50; i++) {
-            DatePricePair pair = new DatePricePair(new Date(), 6000);
+            DatePricePair pair = new DatePricePair(new Date(), 5000);
             list.add(pair);
         }
 
