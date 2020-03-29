@@ -3,8 +3,6 @@ package com.trader;
 import com.trader.price.DatePricePair;
 import com.trader.price.PriceFeed;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
